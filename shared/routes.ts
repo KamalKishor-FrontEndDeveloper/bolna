@@ -91,6 +91,23 @@ export const api = {
           200: z.any(),
           404: errorSchemas.notFound,
         }
+      },
+      batches: {
+        method: 'GET' as const,
+        path: '/api/bolna/batches',
+        responses: {
+          200: z.array(z.any()),
+          401: errorSchemas.unauthorized,
+        }
+      },
+      createBatch: {
+        method: 'POST' as const,
+        path: '/api/bolna/batches',
+        responses: {
+          201: z.any(),
+          400: errorSchemas.validation,
+          401: errorSchemas.unauthorized,
+        }
       }
     },
     calls: {

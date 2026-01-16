@@ -92,6 +92,24 @@ export async function registerRoutes(
     }
   });
 
+  app.get(api.bolna.agents.batches.path, async (req, res) => {
+    try {
+      const result = await bolnaService.listBatches();
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.post(api.bolna.agents.createBatch.path, async (req, res) => {
+    try {
+      const result = await bolnaService.createBatch(req.body);
+      res.status(201).json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   // Calls
   app.post(api.bolna.calls.make.path, async (req, res) => {
     try {

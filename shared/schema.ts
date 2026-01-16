@@ -47,7 +47,14 @@ export const taskSchema = z.object({
     transcriber: transcriberSchema,
     llm: llmSchema,
     synthesizer: synthesizerSchema,
+    incremental_transcription: z.boolean().optional(),
+    number_of_words_to_wait_for_before_interrupting: z.number().optional(),
   }),
+});
+
+export const analyticsConfigSchema = z.object({
+  summarization: z.boolean().optional(),
+  extraction_details: z.string().optional(),
 });
 
 export const agentConfigSchema = z.object({
@@ -55,6 +62,7 @@ export const agentConfigSchema = z.object({
   agent_welcome_message: z.string().min(1, "Welcome message is required"),
   webhook_url: z.string().url("Invalid Webhook URL").optional().or(z.literal("")),
   tasks: z.array(taskSchema).min(1, "At least one task is required"),
+  analytics_config: analyticsConfigSchema.optional(),
 });
 
 export const agentPromptsSchema = z.record(z.object({

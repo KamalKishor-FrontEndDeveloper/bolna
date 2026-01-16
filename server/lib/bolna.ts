@@ -101,6 +101,30 @@ export class BolnaService {
     return response.json();
   }
 
+  async listBatches() {
+    const headers = await this.getHeaders();
+    const response = await fetch(`${BOLNA_API_URL}/batches`, { headers });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to list batches: ${response.status} ${text}`);
+    }
+    return response.json();
+  }
+
+  async createBatch(data: any) {
+    const headers = await this.getHeaders();
+    const response = await fetch(`${BOLNA_API_URL}/batch`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to create batch: ${response.status} ${text}`);
+    }
+    return response.json();
+  }
+
   async listKnowledgebases() {
     const headers = await this.getHeaders();
     const response = await fetch(`${BOLNA_API_URL}/knowledgebase/all`, { headers });
