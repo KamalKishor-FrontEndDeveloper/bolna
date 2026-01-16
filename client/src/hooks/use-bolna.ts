@@ -187,3 +187,57 @@ export function useExecution(id: string | null) {
     },
   });
 }
+
+// === KNOWLEDGEBASE ===
+
+export function useKnowledgebases() {
+  return useQuery({
+    queryKey: [api.bolna.knowledgebase.list.path],
+    queryFn: async () => {
+      const res = await fetch(api.bolna.knowledgebase.list.path);
+      if (!res.ok) throw new Error("Failed to fetch knowledgebases");
+      return await res.json();
+    },
+  });
+}
+
+export function useCreateKnowledgebase() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch(api.bolna.knowledgebase.create.path, {
+        method: api.bolna.knowledgebase.create.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create knowledgebase");
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.bolna.knowledgebase.list.path] });
+      toast({ title: "Knowledge Base Created", description: "Your document is being processed." });
+    },
+  });
+}
+
+export function useDeleteKnowledgebase() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const url = buildUrl(api.bolna.knowledgebase.delete.path, { id });
+      const res = await fetch(url, {
+        method: api.bolna.knowledgebase.delete.method,
+      });
+      if (!res.ok) throw new Error("Failed to delete knowledgebase");
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.bolna.knowledgebase.list.path] });
+      toast({ title: "Knowledge Base Deleted", description: "The document has been removed." });
+    },
+  });
+}

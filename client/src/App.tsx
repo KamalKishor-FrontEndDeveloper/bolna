@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 
 import Dashboard from "@/pages/Dashboard";
 import Agents from "@/pages/Agents";
+import Knowledgebase from "@/pages/Knowledgebase";
 import Calls from "@/pages/Calls";
 import Executions from "@/pages/Executions";
 import Settings from "@/pages/Settings";
@@ -16,6 +17,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/agents" component={Agents} />
+      <Route path="/knowledgebase" component={Knowledgebase} />
       <Route path="/calls" component={Calls} />
       <Route path="/executions" component={Executions} />
       <Route path="/settings" component={Settings} />

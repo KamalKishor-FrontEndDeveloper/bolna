@@ -101,6 +101,43 @@ export class BolnaService {
     return response.json();
   }
 
+  async listKnowledgebases() {
+    const headers = await this.getHeaders();
+    const response = await fetch(`${BOLNA_API_URL}/knowledgebase/all`, { headers });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to list knowledgebases: ${response.status} ${text}`);
+    }
+    return response.json();
+  }
+
+  async createKnowledgebase(data: any) {
+    const headers = await this.getHeaders();
+    const response = await fetch(`${BOLNA_API_URL}/knowledgebase`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to create knowledgebase: ${response.status} ${text}`);
+    }
+    return response.json();
+  }
+
+  async deleteKnowledgebase(id: string) {
+    const headers = await this.getHeaders();
+    const response = await fetch(`${BOLNA_API_URL}/knowledgebase/${id}`, {
+      method: "DELETE",
+      headers,
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to delete knowledgebase: ${response.status} ${text}`);
+    }
+    return response.json();
+  }
+
   async deleteAgent(id: string) {
     const headers = await this.getHeaders();
     const response = await fetch(`${BOLNA_API_URL}/v2/agent/${id}`, {

@@ -114,6 +114,32 @@ export const api = {
           404: errorSchemas.notFound,
         }
       }
+    },
+    knowledgebase: {
+      list: {
+        method: 'GET' as const,
+        path: '/api/bolna/knowledgebase',
+        responses: {
+          200: z.array(z.any()),
+          401: errorSchemas.unauthorized,
+        }
+      },
+      create: {
+        method: 'POST' as const,
+        path: '/api/bolna/knowledgebase',
+        responses: {
+          201: z.any(),
+          400: errorSchemas.validation,
+        }
+      },
+      delete: {
+        method: 'DELETE' as const,
+        path: '/api/bolna/knowledgebase/:id',
+        responses: {
+          200: z.any(),
+          404: errorSchemas.notFound,
+        }
+      }
     }
   }
 };

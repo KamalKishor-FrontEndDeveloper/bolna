@@ -116,5 +116,33 @@ export async function registerRoutes(
     }
   });
 
+  // Knowledgebase
+  app.get(api.bolna.knowledgebase.list.path, async (req, res) => {
+    try {
+      const result = await bolnaService.listKnowledgebases();
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post(api.bolna.knowledgebase.create.path, async (req, res) => {
+    try {
+      const result = await bolnaService.createKnowledgebase(req.body);
+      res.status(201).json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete(api.bolna.knowledgebase.delete.path, async (req, res) => {
+    try {
+      const result = await bolnaService.deleteKnowledgebase(req.params.id);
+      res.json(result);
+    } catch (error: any) {
+      res.status(404).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

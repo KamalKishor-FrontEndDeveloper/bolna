@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Bot, Phone, Activity, Settings, LayoutDashboard, Menu, X } from "lucide-react";
+import { Bot, Phone, Activity, Settings, LayoutDashboard, Menu, X, BookOpen } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useApiKey } from "@/hooks/use-api-keys";
@@ -16,6 +16,7 @@ export function Layout({ children }: LayoutProps) {
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/agents", label: "Agents", icon: Bot },
+    { href: "/knowledgebase", label: "Knowledge Base", icon: BookOpen },
     { href: "/calls", label: "Phone Calls", icon: Phone },
     { href: "/executions", label: "History", icon: Activity },
     { href: "/settings", label: "Settings", icon: Settings },
