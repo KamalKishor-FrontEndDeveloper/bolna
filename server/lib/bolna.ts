@@ -15,21 +15,10 @@ export class BolnaService {
   }
 
   async listAgents() {
-    // v2 endpoint from overview: GET /v2/agent/all
-    // v1 example was: GET /agent/all (from intro)
-    // Let's try v2 first as per docs override.
     const headers = await this.getHeaders();
     const response = await fetch(`${BOLNA_API_URL}/v2/agent/all`, { headers });
     
     if (!response.ok) {
-       // Fallback to v1 if v2 fails 404? 
-       // Docs said v2 is the way. Let's stick to v2.
-       // If 404, maybe try /agent
-       if (response.status === 404) {
-          const v1Response = await fetch(`${BOLNA_API_URL}/agent/all`, { headers });
-          if (!v1Response.ok) throw new Error(`Failed to fetch agents: ${v1Response.statusText}`);
-          return v1Response.json();
-       }
        const text = await response.text();
        throw new Error(`Failed to fetch agents: ${response.status} ${text}`);
     }
@@ -38,7 +27,6 @@ export class BolnaService {
 
   async createAgent(data: any) {
     const headers = await this.getHeaders();
-    // Docs say POST /v2/agent
     const response = await fetch(`${BOLNA_API_URL}/v2/agent`, {
       method: "POST",
       headers,
@@ -54,7 +42,6 @@ export class BolnaService {
 
   async getAgent(id: string) {
     const headers = await this.getHeaders();
-    // Guessing GET /v2/agent/:id based on standard REST
     const response = await fetch(`${BOLNA_API_URL}/v2/agent/${id}`, { headers });
     if (!response.ok) {
        const text = await response.text();
@@ -65,7 +52,6 @@ export class BolnaService {
 
   async updateAgent(id: string, data: any) {
     const headers = await this.getHeaders();
-    // Docs: PUT /v2/agent/:agent_id
     const response = await fetch(`${BOLNA_API_URL}/v2/agent/${id}`, {
       method: "PUT",
       headers,
@@ -81,8 +67,6 @@ export class BolnaService {
 
   async makeCall(data: any) {
     const headers = await this.getHeaders();
-    // Docs v1: POST /call
-    // Is there v2? Overview didn't list call endpoints. Sticking to v1 for calls.
     const response = await fetch(`${BOLNA_API_URL}/call`, {
       method: "POST",
       headers,
@@ -98,12 +82,34 @@ export class BolnaService {
 
   async getExecution(id: string) {
     const headers = await this.getHeaders();
-    // Docs v1: GET /executions/:id
     const response = await fetch(`${BOLNA_API_URL}/executions/${id}`, { headers });
 
     if (!response.ok) {
        const text = await response.text();
        throw new Error(`Failed to get execution: ${response.status} ${text}`);
+    }
+    return response.json();
+  }
+
+  async listExecutions(agentId: string) {
+    const headers = await this.getHeaders();
+    const response = await fetch(`${BOLNA_API_URL}/v2/agent/${agentId}/executions`, { headers });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to list executions: ${response.status} ${text}`);
+    }
+    return response.json();
+  }
+
+  async deleteAgent(id: string) {
+    const headers = await this.getHeaders();
+    const response = await fetch(`${BOLNA_API_URL}/v2/agent/${id}`, {
+      method: "DELETE",
+      headers,
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to delete agent: ${response.status} ${text}`);
     }
     return response.json();
   }

@@ -75,6 +75,22 @@ export const api = {
           200: z.any(),
           404: errorSchemas.notFound,
         }
+      },
+      delete: {
+        method: 'DELETE' as const,
+        path: '/api/bolna/agents/:id',
+        responses: {
+          200: z.any(),
+          404: errorSchemas.notFound,
+        }
+      },
+      executions: {
+        method: 'GET' as const,
+        path: '/api/bolna/agents/:id/executions',
+        responses: {
+          200: z.any(),
+          404: errorSchemas.notFound,
+        }
       }
     },
     calls: {

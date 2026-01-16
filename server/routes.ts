@@ -74,6 +74,24 @@ export async function registerRoutes(
     }
   });
 
+  app.delete(api.bolna.agents.delete.path, async (req, res) => {
+    try {
+      const result = await bolnaService.deleteAgent(req.params.id);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.get(api.bolna.agents.executions.path, async (req, res) => {
+    try {
+      const result = await bolnaService.listExecutions(req.params.id);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   // Calls
   app.post(api.bolna.calls.make.path, async (req, res) => {
     try {

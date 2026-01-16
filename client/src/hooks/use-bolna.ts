@@ -94,6 +94,48 @@ export function useUpdateAgent() {
   });
 }
 
+export function useDeleteAgent() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const url = buildUrl(api.bolna.agents.delete.path, { id });
+      const res = await fetch(url, {
+        method: api.bolna.agents.delete.method,
+      });
+
+      if (!res.ok) throw new Error("Failed to delete agent");
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.bolna.agents.list.path] });
+      toast({ title: "Agent Deleted", description: "The agent has been removed." });
+    },
+    onError: (err) => {
+      toast({ 
+        title: "Delete Failed", 
+        description: err.message, 
+        variant: "destructive" 
+      });
+    }
+  });
+}
+
+export function useAgentExecutions(agentId: string | null) {
+  return useQuery({
+    queryKey: [api.bolna.agents.executions.path, agentId],
+    enabled: !!agentId,
+    queryFn: async () => {
+      if (!agentId) return null;
+      const url = buildUrl(api.bolna.agents.executions.path, { id: agentId });
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch executions");
+      return await res.json();
+    },
+  });
+}
+
 // === CALLS ===
 
 export function useMakeCall() {

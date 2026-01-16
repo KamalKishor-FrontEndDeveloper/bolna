@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Bot, Plus, Loader2, MessageSquare, Mic, Cpu, Volume2, ArrowRight } from "lucide-react";
+import { Bot, Plus, Loader2, MessageSquare, Mic, Cpu, Volume2, ArrowRight, Trash2, ExternalLink } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { motion } from "framer-motion";
@@ -18,6 +18,19 @@ import { createAgentRequestSchema, type CreateAgentRequest } from "@shared/schem
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAgents, useCreateAgent, useDeleteAgent } from "@/hooks/use-bolna";
+import { Link } from "wouter";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const DEFAULT_VALUES: CreateAgentRequest = {
   agent_config: {
@@ -49,6 +62,7 @@ const DEFAULT_VALUES: CreateAgentRequest = {
 export default function Agents() {
   const { data: agents, isLoading } = useAgents();
   const { mutate: createAgent, isPending: isCreating } = useCreateAgent();
+  const { mutate: deleteAgent } = useDeleteAgent();
   const [isOpen, setIsOpen] = useState(false);
 
   const form = useForm<CreateAgentRequest>({
@@ -303,11 +317,39 @@ export default function Agents() {
                   <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors">
                     <Bot className="w-5 h-5" />
                   </div>
-                  <StatusBadge status={agent.status || 'Active'} />
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={agent.status || 'Active'} />
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Agent?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete "{agent.agent_config?.agent_name || 'this agent'}" and all associated call records. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => deleteAgent(agent.id)}
+                            className="bg-red-500 hover:bg-red-600"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="pb-6">
-                <CardTitle className="truncate text-lg mb-1">{agent.agent_config?.agent_name || "Unnamed Agent"}</CardTitle>
+                <div className="flex justify-between items-start mb-1">
+                  <CardTitle className="truncate text-lg">{agent.agent_config?.agent_name || "Unnamed Agent"}</CardTitle>
+                </div>
                 <CardDescription className="line-clamp-2 min-h-[2.5rem]">
                   {agent.agent_config?.agent_welcome_message || "No description provided"}
                 </CardDescription>
@@ -318,6 +360,14 @@ export default function Agents() {
                   <ArrowRight className="w-2 h-2" />
                   <Cpu className="w-3 h-3" />
                   <span>{agent.agent_config?.tasks?.[0]?.task_config?.llm?.model || "GPT-4"}</span>
+                </div>
+
+                <div className="mt-6">
+                  <Link href={`/executions?agent_id=${agent.id}`}>
+                    <Button variant="outline" size="sm" className="w-full gap-2 text-xs">
+                      <ExternalLink className="w-3 h-3" /> View Call History
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
               <CardFooter className="border-t bg-slate-50/50 p-4">
