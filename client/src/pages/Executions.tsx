@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function Executions() {
   const [location] = useLocation();
@@ -21,7 +22,7 @@ export default function Executions() {
   const [selectedAgentId, setSelectedAgentId] = useState<string>(agentIdParam || "");
   
   const { data: agents } = useAgents();
-  const { data: execution, isLoading: isExecutionLoading, error: executionError } = useExecution(queryId);
+  const { data: execution, isLoading: isExecutionLoading } = useExecution(queryId);
   const { data: agentExecutions, isLoading: isListLoading } = useAgentExecutions(selectedAgentId || null);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -88,7 +89,7 @@ export default function Executions() {
             </div>
           )}
 
-          {!isLoading && !execution && !agentExecutions?.data && (
+          {!isLoading && !queryId && !agentExecutions?.data && (
             <EmptyState 
               icon={History}
               title="No Executions Found"
@@ -103,7 +104,7 @@ export default function Executions() {
               {agentExecutions.data.map((exec: any) => (
                 <Card 
                   key={exec.id} 
-                  className="hover-elevate cursor-pointer border-slate-200 transition-all hover:border-primary/20"
+                  className="hover:shadow-md cursor-pointer border-slate-200 transition-all hover:border-primary/20"
                   onClick={() => {
                     setQueryId(exec.id);
                     setSearchId(exec.id);
@@ -218,9 +219,6 @@ export default function Executions() {
           )}
         </div>
       </div>
-    </Layout>
-  );
-}
     </Layout>
   );
 }
