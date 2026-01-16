@@ -17,6 +17,7 @@ export function Layout({ children }: LayoutProps) {
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/agents", label: "Agents", icon: Bot },
     { href: "/knowledgebase", label: "Knowledge Base", icon: BookOpen },
+    { href: "/batches", label: "Batches", icon: Layers },
     { href: "/calls", label: "Phone Calls", icon: Phone },
     { href: "/executions", label: "History", icon: Activity },
     { href: "/settings", label: "Settings", icon: Settings },
