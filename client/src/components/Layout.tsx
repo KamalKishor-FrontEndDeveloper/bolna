@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Bot, Phone, Activity, Settings, LayoutDashboard, Menu, X, BookOpen } from "lucide-react";
+import { Bot, Phone, Activity, Settings, LayoutDashboard, Menu, X, BookOpen, Layers } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useApiKey } from "@/hooks/use-api-keys";

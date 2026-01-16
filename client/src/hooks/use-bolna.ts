@@ -188,6 +188,40 @@ export function useExecution(id: string | null) {
   });
 }
 
+// === BATCHES ===
+
+export function useBatches() {
+  return useQuery({
+    queryKey: [api.bolna.agents.batches.path],
+    queryFn: async () => {
+      const res = await fetch(api.bolna.agents.batches.path);
+      if (!res.ok) throw new Error("Failed to fetch batches");
+      return await res.json();
+    },
+  });
+}
+
+export function useCreateBatch() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch(api.bolna.agents.createBatch.path, {
+        method: api.bolna.agents.createBatch.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create batch");
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.bolna.agents.batches.path] });
+      toast({ title: "Batch Created", description: "Your batch processing has started." });
+    },
+  });
+}
+
 // === KNOWLEDGEBASE ===
 
 export function useKnowledgebases() {
