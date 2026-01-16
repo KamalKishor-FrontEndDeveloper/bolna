@@ -1,14 +1,13 @@
-import { pgTable, text, serial, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // === TABLE DEFINITIONS ===
 
-// Store API configuration (e.g., Bolna API Key)
 export const apiConfigurations = pgTable("api_configurations", {
   id: serial("id").primaryKey(),
-  key: text("key").notNull().unique(), // e.g., "BOLNA_API_KEY"
-  value: text("value").notNull(),      // The actual API key
+  key: text("key").notNull().unique(), 
+  value: text("value").notNull(),      
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
@@ -16,35 +15,67 @@ export const insertApiConfigSchema = createInsertSchema(apiConfigurations);
 
 // === BOLNA API TYPES ===
 
-// 1. Agent Configuration
-// Based on v2 docs: agent_config object
+export const transcriberSchema = z.object({
+  model: z.string().default("deepgram"),
+  language: z.string().default("en"),
+  sampling_rate: z.number().default(16000),
+  stream: z.boolean().default(true),
+});
+
+export const llmSchema = z.object({
+  model: z.string().default("gpt-4o"),
+  max_tokens: z.number().default(100),
+  temperature: z.number().default(0.7),
+  family: z.string().default("openai"),
+});
+
+export const synthesizerSchema = z.object({
+  model: z.string().default("elevenlabs"),
+  voice: z.string().default("rachel"),
+  voice_id: z.string().optional(),
+  sampling_rate: z.number().default(16000),
+  stream: z.boolean().default(true),
+});
+
+export const taskSchema = z.object({
+  task_type: z.string().default("conversation"),
+  toolchain: z.object({
+    execution: z.string().default("parallel"),
+    pipelines: z.array(z.array(z.string())).default([["transcriber", "llm", "synthesizer"]]),
+  }),
+  task_config: z.object({
+    transcriber: transcriberSchema,
+    llm: llmSchema,
+    synthesizer: synthesizerSchema,
+  }),
+});
+
 export const agentConfigSchema = z.object({
   agent_name: z.string().min(1, "Agent name is required"),
   agent_welcome_message: z.string().min(1, "Welcome message is required"),
-  webhook_url: z.string().url("Invalid Webhook URL").optional(), // Docs say required but maybe optional in some contexts? Sticking to docs: required.
-  tasks: z.array(z.any()), // Complex nested structure, keeping as any for flexibility for now
-  agent_type: z.string().optional(), // v1 had it, v2 overview didn't explicitly detail it but good to have
+  webhook_url: z.string().url("Invalid Webhook URL").optional().or(z.literal("")),
+  tasks: z.array(taskSchema).min(1, "At least one task is required"),
 });
 
-export const agentPromptsSchema = z.record(z.any()); // "task_1": { system_prompt: ... }
+export const agentPromptsSchema = z.record(z.object({
+  system_prompt: z.string().min(1, "System prompt is required"),
+}));
 
 export const createAgentRequestSchema = z.object({
   agent_config: agentConfigSchema,
-  agent_prompts: agentPromptsSchema.optional(),
+  agent_prompts: agentPromptsSchema,
 });
 
 export const updateAgentRequestSchema = createAgentRequestSchema.partial();
 
-// 2. Call Configuration
 export const makeCallRequestSchema = z.object({
-  agent_id: z.string().uuid("Invalid Agent ID"),
+  agent_id: z.string(),
   recipient_phone_number: z.string().min(1, "Recipient phone number is required"),
   from_phone_number: z.string().min(1, "From phone number is required"),
   scheduled_at: z.string().datetime().optional(),
   user_data: z.record(z.any()).optional(),
 });
 
-// 3. Execution/Response Types
 export const agentResponseSchema = z.object({
   agent_id: z.string(),
   status: z.string(),
