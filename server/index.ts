@@ -23,6 +23,23 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
+// Process-level handlers: log unhandled errors and avoid crashing in production.
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[unhandledRejection] reason:', reason, 'promise:', promise);
+  if (process.env.NODE_ENV !== 'production' && process.env.CRASH_ON_ERROR === 'true') {
+    // Allow crashing in dev when explicitly requested for debugging
+    throw reason as any;
+  }
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err);
+  if (process.env.NODE_ENV !== 'production' && process.env.CRASH_ON_ERROR === 'true') {
+    // In dev allow exit so you see stack traces; in production keep running to avoid 502s
+    process.exit(1);
+  }
+});
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -75,7 +92,7 @@ app.use((req, res, next) => {
   app.use((err:any, _req:any, res:any, _next:any) => {
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Internal Server Error";
-  console.error(err); // log full error
+  console.error('[ERROR HANDLER]', err); // log full error with prefix
   res.status(status).json({ message });
   // Only crash in dev when explicitly requested
   if (process.env.NODE_ENV !== 'production' && process.env.CRASH_ON_ERROR === 'true') {
@@ -91,6 +108,11 @@ app.use((req, res, next) => {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
+
+  // Health check endpoint for load balancers / readiness probes
+  app.get('/_health', (_req, res) => {
+    res.json({ status: 'ok' });
+  });
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.

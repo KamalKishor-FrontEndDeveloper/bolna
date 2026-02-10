@@ -23,36 +23,41 @@ export function registerMultiTenantRoutes(app: Express) {
   // Super Admin Login
   console.log('🔧 [ROUTES] Registering', api.superAdmin.login.path);
   app.post(api.superAdmin.login.path, async (req: Request, res: Response) => {
-    console.log('[SUPER ADMIN LOGIN] Request received:', { email: req.body.email });
-    
-    const parse = loginSchema.safeParse(req.body);
-    if (!parse.success) {
-      console.log('[SUPER ADMIN LOGIN] Validation failed:', parse.error.message);
-      return res.status(400).json({ message: parse.error.message });
-    }
+    try {
+      console.log('[SUPER ADMIN LOGIN] Request received:', { email: req.body.email });
+      
+      const parse = loginSchema.safeParse(req.body);
+      if (!parse.success) {
+        console.log('[SUPER ADMIN LOGIN] Validation failed:', parse.error.message);
+        return res.status(400).json({ message: parse.error.message });
+      }
 
-    const { email, password } = parse.data;
-    console.log('[SUPER ADMIN LOGIN] Looking up admin:', email);
-    
-    const [admin] = await db.select().from(superAdmins).where(eq(superAdmins.email, email));
-    
-    if (!admin) {
-      console.log('[SUPER ADMIN LOGIN] Admin not found');
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-    
-    console.log('[SUPER ADMIN LOGIN] Admin found, comparing password');
-    const passwordMatch = await comparePassword(password, admin.password_hash);
-    console.log('[SUPER ADMIN LOGIN] Password match:', passwordMatch);
-    
-    if (!passwordMatch) {
-      console.log('[SUPER ADMIN LOGIN] Password mismatch');
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
+      const { email, password } = parse.data;
+      console.log('[SUPER ADMIN LOGIN] Looking up admin:', email);
+      
+      const [admin] = await db.select().from(superAdmins).where(eq(superAdmins.email, email));
+      
+      if (!admin) {
+        console.log('[SUPER ADMIN LOGIN] Admin not found');
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+      
+      console.log('[SUPER ADMIN LOGIN] Admin found, comparing password');
+      const passwordMatch = await comparePassword(password, admin.password_hash);
+      console.log('[SUPER ADMIN LOGIN] Password match:', passwordMatch);
+      
+      if (!passwordMatch) {
+        console.log('[SUPER ADMIN LOGIN] Password mismatch');
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
 
-    console.log('[SUPER ADMIN LOGIN] Success! Generating token');
-    const token = generateToken({ id: admin.id, type: 'super_admin' });
-    res.json({ token, admin: { id: admin.id, name: admin.name, email: admin.email } });
+      console.log('[SUPER ADMIN LOGIN] Success! Generating token');
+      const token = generateToken({ id: admin.id, type: 'super_admin' });
+      res.json({ token, admin: { id: admin.id, name: admin.name, email: admin.email } });
+    } catch (error: any) {
+      console.error('[SUPER ADMIN LOGIN] Error:', error?.message || error);
+      res.status(500).json({ message: 'Login failed due to server error' });
+    }
   });
 
   // Get current super admin info
