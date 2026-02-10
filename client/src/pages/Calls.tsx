@@ -14,13 +14,14 @@ import { useToast } from "@/hooks/use-toast";
 export default function Calls() {
   const { data: agents } = useAgents();
   const { mutate: makeCall, isPending } = useMakeCall();
-  
   const [formData, setFormData] = useState({
     agent_id: "",
     recipient_phone_number: "",
     from_phone_number: "",
     user_data: "{}"
   });
+
+  const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,9 +32,17 @@ export default function Calls() {
         recipient_phone_number: formData.recipient_phone_number,
         from_phone_number: formData.from_phone_number,
         user_data: userData
+      }, {
+        onSuccess: () => {
+          toast({ title: 'Call initiated', description: 'Your call has been started successfully' });
+          setFormData({ ...formData, recipient_phone_number: '', user_data: '{}' });
+        },
+        onError: (err: any) => {
+          toast({ title: 'Call failed', description: err?.message || 'Unable to initiate call', variant: 'destructive' });
+        }
       });
     } catch (err) {
-      alert("Invalid User Data JSON");
+      toast({ title: 'Invalid JSON', description: 'Please check your User Data format', variant: 'destructive' });
     }
   };
 
@@ -41,13 +50,12 @@ export default function Calls() {
     <Layout>
       <PageHeader title="Phone Calls" description="Initiate outbound calls with your agents" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Make a Call</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card className="rounded-lg border">
+            <div className="p-6 space-y-6">
+              <h2 className="text-2xl font-semibold">Make a Call</h2>
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label>Select Agent</Label>
@@ -55,15 +63,19 @@ export default function Calls() {
                     value={formData.agent_id} 
                     onValueChange={(val) => setFormData({...formData, agent_id: val})}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Choose an agent" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.isArray(agents) && agents.map((agent: any) => (
-                        <SelectItem key={agent.id} value={agent.id}>
-                          {agent.agent_config?.agent_name || "Unnamed"} ({agent.id.slice(0, 8)}...)
-                        </SelectItem>
-                      ))}
+                      {Array.isArray(agents) && agents.map((agent: any) => {
+                        const idStr = String(agent.id || agent.bolna_agent_id || '');
+                        if (!idStr) return null;
+                        return (
+                          <SelectItem key={idStr} value={idStr}>
+                            {agent.agent_config?.agent_name || "Unnamed"} ({idStr.slice(0, 8)}...)
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -80,14 +92,13 @@ export default function Calls() {
                     <p className="text-xs text-slate-500">Include country code (E.164 format)</p>
                   </div>
                   <div className="space-y-2">
-                    <Label>From Phone Number</Label>
+                    <Label>From Phone Number (Optional)</Label>
                     <Input 
                       placeholder="+19876543210" 
                       value={formData.from_phone_number}
                       onChange={(e) => setFormData({...formData, from_phone_number: e.target.value})}
-                      required
                     />
-                    <p className="text-xs text-slate-500">Must be a verified number on Bolna</p>
+                    <p className="text-xs text-slate-500">Leave empty to use default number</p>
                   </div>
                 </div>
 
@@ -104,24 +115,26 @@ export default function Calls() {
                   </p>
                 </div>
 
-                <Button type="submit" className="w-full md:w-auto" disabled={isPending}>
-                  {isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Initiating...
-                    </>
-                  ) : (
-                    <>
-                      <Phone className="w-4 h-4 mr-2" /> Start Call
-                    </>
-                  )}
-                </Button>
+                <div className="pt-2">
+                  <Button type="submit" className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded" disabled={isPending}>
+                    {isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Initiating...
+                      </>
+                    ) : (
+                      <>
+                        <Phone className="w-4 h-4 mr-2" /> Start Call
+                      </>
+                    )}
+                  </Button>
+                </div>
               </form>
-            </CardContent>
+            </div>
           </Card>
         </div>
 
         <div>
-          <Card className="bg-blue-50 border-blue-100">
+          <Card className="bg-blue-50 border border-blue-100 rounded-lg">
             <CardHeader>
               <div className="flex items-center gap-2 text-blue-700">
                 <Info className="w-5 h-5" />

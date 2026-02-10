@@ -2,16 +2,20 @@ interface PageHeaderProps {
   title: string;
   description?: string;
   action?: React.ReactNode;
+  children?: React.ReactNode;
 }
 
-export function PageHeader({ title, description, action }: PageHeaderProps) {
+export function PageHeader({ title, description, action, children }: PageHeaderProps) {
   return (
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+      <div className="space-y-1">
         <h1 className="text-3xl font-display font-bold text-slate-900 tracking-tight">{title}</h1>
-        {description && <p className="text-slate-500 mt-1">{description}</p>}
+        {description && <p className="text-slate-500">{description}</p>}
       </div>
-      {action && <div>{action}</div>}
+      <div className="flex items-center gap-2">
+        {action}
+        {children}
+      </div>
     </div>
   );
 }

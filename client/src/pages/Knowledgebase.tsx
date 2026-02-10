@@ -1,17 +1,18 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/PageHeader";
 import { useKnowledgebases, useCreateKnowledgebase, useDeleteKnowledgebase } from "@/hooks/use-bolna";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BookOpen, Plus, Loader2, Trash2, FileText, Globe, ExternalLink } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/EmptyState";
-import { motion } from "framer-motion";
 import { format } from "date-fns";
+import { useToast } from '@/hooks/use-toast';
 
 export default function Knowledgebase() {
   const { data: knowledgebases, isLoading } = useKnowledgebases();
@@ -23,13 +24,66 @@ export default function Knowledgebase() {
     knowledgebase_name: "",
     url: ""
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
+
+  const { toast } = useToast();
+
+  const handleFileSelect = (file?: File | null) => {
+    if (!file) return;
+    const allowed = ['application/pdf', 'text/plain'];
+    const maxBytes = 20 * 1024 * 1024;
+    if (!allowed.includes(file.type) && !file.name.toLowerCase().endsWith('.pdf') && !file.name.toLowerCase().endsWith('.txt')) {
+      toast({ title: 'Unsupported file type', description: 'Only PDF and TXT files are allowed.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > maxBytes) {
+      toast({ title: 'File too large', description: 'Maximum supported file size is 20MB.', variant: 'destructive' });
+      return;
+    }
+    setSelectedFile(file);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createKb(formData, {
+
+    // Validate input first
+    if (kbType === 'file' && !selectedFile) {
+      toast({ title: "Missing file", description: "Must provide either 'file' or 'url' parameter", variant: 'destructive' });
+      return;
+    }
+    if (kbType === 'url' && !formData.url) {
+      toast({ title: "Missing URL", description: "Must provide either 'file' or 'url' parameter", variant: 'destructive' });
+      return;
+    }
+
+    // If a file was selected, build FormData and send as multipart/form-data
+    if (selectedFile) {
+      const fd = new FormData();
+      fd.append('file', selectedFile, selectedFile.name);
+      if (formData.knowledgebase_name) fd.append('knowledgebase_name', formData.knowledgebase_name);
+      createKb(fd as any, {
+        onSuccess: () => {
+          setIsOpen(false);
+          setFormData({ knowledgebase_name: '', url: '' });
+          setSelectedFile(null);
+        },
+        onError: (err: any) => {
+          toast({ title: 'Creation failed', description: err?.message || 'Failed to create knowledge base', variant: 'destructive' });
+        }
+      });
+      return;
+    }
+
+    // Fallback: send JSON (URL-based ingestion)
+    createKb({ url: formData.url, knowledgebase_name: formData.knowledgebase_name }, {
       onSuccess: () => {
         setIsOpen(false);
-        setFormData({ knowledgebase_name: "", url: "" });
+        setFormData({ knowledgebase_name: '', url: '' });
+      },
+      onError: (err: any) => {
+        toast({ title: 'Creation failed', description: err?.message || 'Failed to create knowledge base', variant: 'destructive' });
       }
     });
   };
@@ -43,7 +97,7 @@ export default function Knowledgebase() {
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
-                <Plus className="w-4 h-4" /> Add Knowledge
+                <Plus className="w-4 h-4" /> Add Knowledge Base
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -79,10 +133,40 @@ export default function Knowledgebase() {
                 </div>
 
                 {kbType === "file" ? (
-                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center space-y-2">
-                    <FileText className="w-8 h-8 text-slate-300 mx-auto" />
-                    <p className="text-sm font-medium">Click to upload or drag and drop</p>
-                    <p className="text-xs text-slate-400">PDF, TXT up to 10MB</p>
+                  <div>
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
+                      onDragLeave={(e) => { e.preventDefault(); setIsDragActive(false); }}
+                      onDrop={(e) => { e.preventDefault(); setIsDragActive(false); const f = e.dataTransfer?.files?.[0]; handleFileSelect(f || null); }}
+                      className={`border-2 border-dashed rounded-xl p-8 text-center space-y-2 transition-colors ${isDragActive ? 'border-blue-400 bg-slate-50' : 'border-slate-200'}`}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <FileText className="w-8 h-8 text-slate-300 mx-auto" />
+                      <p className="text-sm font-medium">Click to upload or drag and drop</p>
+                      <p className="text-xs text-slate-400">PDF, TXT up to 20MB</p>
+
+                      <div className="mt-3 flex items-center justify-center gap-3">
+                        <input ref={fileInputRef} type="file" className="hidden" accept="application/pdf,text/plain" onChange={(e) => { const f = e.target.files && e.target.files[0]; handleFileSelect(f || null); }} />
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()}>Choose File</Button>
+
+                        {selectedFile && (
+                          <div className="flex items-center gap-3">
+                            <div className="text-sm text-slate-600 truncate">{selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)</div>
+                            <Button variant="ghost" size="icon" onClick={() => setSelectedFile(null)} aria-label="Remove file">✕</Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {isCreating && selectedFile && (
+                      <div className="mt-2">
+                        <div className="h-2 bg-slate-100 rounded overflow-hidden">
+                          <div className="h-2 bg-blue-500 animate-pulse" style={{ width: '60%' }} />
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">Uploading...</div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -97,7 +181,7 @@ export default function Knowledgebase() {
                 )}
 
                 <div className="flex justify-end gap-3 pt-4 border-t">
-                  <Button variant="outline" type="button" onClick={() => setIsOpen(false)}>Cancel</Button>
+                  <Button variant="ghost" type="button" onClick={() => setIsOpen(false)}>Cancel</Button>
                   <Button type="submit" disabled={isCreating}>
                     {isCreating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Create Knowledge Base
@@ -124,46 +208,71 @@ export default function Knowledgebase() {
           onAction={() => setIsOpen(true)}
         />
       ) : (
-        <motion.div 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: 1 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {knowledgebases.map((kb: any) => (
-            <Card key={kb.rag_id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
-                    {kb.source_url ? <Globe className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={kb.status || 'Active'} />
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-slate-400 hover:text-red-500"
-                      onClick={() => deleteKb(kb.rag_id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-                <CardTitle className="text-lg mt-3 truncate">{kb.knowledgebase_name || "Untitled Knowledge"}</CardTitle>
-                <CardDescription className="truncate">
-                  {kb.source_url || kb.file_name || "No source information"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4 text-xs text-slate-500">
-                  <span>Created {format(new Date(kb.created_at), "MMM d, yyyy")}</span>
-                </div>
-              </CardContent>
-              <CardFooter className="border-t bg-slate-50/50 p-3">
-                <span className="text-[10px] font-mono text-slate-400 truncate w-full">RAG ID: {kb.rag_id}</span>
-              </CardFooter>
-            </Card>
-          ))}
-        </motion.div>
+        <div className="mt-4">
+      
+          <div className="overflow-auto rounded-lg border">
+            <table className="min-w-full table-fixed">
+              <thead className="bg-white">
+                <tr>
+                  <th className="text-left p-4 text-xs text-slate-500">RAG ID</th>
+                  <th className="text-left p-4 text-xs text-slate-500">Source</th>
+                  <th className="text-left p-4 text-xs text-slate-500">Type</th>
+                  <th className="text-left p-4 text-xs text-slate-500">Created</th>
+                  <th className="text-left p-4 text-xs text-slate-500">Status</th>
+                  <th className="text-left p-4 text-xs text-slate-500">Delete</th>
+                </tr>
+              </thead>
+              <tbody>
+                {knowledgebases.map((kb: any) => {
+                  const source = kb.file_name || kb.source_url || 'Unknown';
+                  const ext = kb.file_name ? (String(kb.file_name).split('.').pop() || '').toLowerCase() : '';
+                  const type = kb.source_url ? 'Website' : (ext === 'pdf' ? 'Pdf' : ext ? ext.toUpperCase() : 'File');
+                  return (
+                    <tr key={kb.rag_id} className="border-t last:border-b hover:bg-slate-50">
+                      <td className="p-4 align-middle text-sm font-mono text-slate-600 truncate">{kb.rag_id}</td>
+                      <td className="p-4 align-middle text-sm truncate">{source}</td>
+                      <td className="p-4 align-middle text-sm">{type}</td>
+                      <td className="p-4 align-middle text-sm text-slate-500">{kb.humanized_created_at || format(new Date(kb.created_at), 'MMM d, yyyy')}</td>
+                      <td className="p-4 align-middle"> <StatusBadge status={kb.status || 'processing'} /></td>
+                      <td className="p-4 align-middle">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-slate-400 hover:text-red-500"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Knowledge Base</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this knowledge base? This action cannot be undone.
+                                <br /><br />
+                                <strong>Source:</strong> {source}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => deleteKb(kb.rag_id)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </Layout>
   );

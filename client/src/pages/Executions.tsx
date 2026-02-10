@@ -1,30 +1,170 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/PageHeader";
 import { useExecution, useAgents, useAgentExecutions } from "@/hooks/use-bolna";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Loader2, Clock, DollarSign, MessageSquare, History, PhoneIncoming, PhoneOutgoing, ExternalLink, Download, RefreshCw, StopCircle, Filter, Plus, BarChart3, X, FileText } from "lucide-react";
+import { Search, Loader2, Clock, DollarSign, MessageSquare, History, PhoneIncoming, PhoneOutgoing, ExternalLink, Download, RefreshCw, StopCircle, Filter, Plus, BarChart3, X, FileText, Calendar } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ConversationDialog } from "@/components/ConversationDialog";
+import { TraceDataDialog } from "@/components/TraceDataDialog";
+import { RawDataDialog } from "@/components/RawDataDialog";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import type { DateRange } from "react-day-picker";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Executions() {
   const [location] = useLocation();
+  
+  // Support both URL formats:
+  // 1. /agent-executions/{agentId}/{batchId}
+  // 2. /executions?agent_id={agentId}&batch_id={batchId}
+  const pathMatch = location.match(/^\/agent-executions\/([^\/]+)\/([^\/]+)/);
   const searchParams = new URLSearchParams(location.split('?')[1]);
-  const agentIdParam = searchParams.get('agent_id');
+  
+  const agentIdParam = pathMatch ? pathMatch[1] : searchParams.get('agent_id');
+  const batchIdParam = pathMatch ? pathMatch[2] : searchParams.get('batch_id');
 
   const [searchId, setSearchId] = useState("");
   const [queryId, setQueryId] = useState<string | null>(null);
   const [selectedAgentId, setSelectedAgentId] = useState<string>(agentIdParam || "");
+  const [selectedBatchId, setSelectedBatchId] = useState<string>(batchIdParam || "all-batches");
+  const [showConversationDialog, setShowConversationDialog] = useState(false);
+  const [showTraceDialog, setShowTraceDialog] = useState(false);
+  const [showRawDialog, setShowRawDialog] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(new Date().setDate(new Date().getDate() - 7)),
+    to: new Date()
+  });
+  const [filters, setFilters] = useState({
+    page_number: 1,
+    page_size: 20,
+    status: 'all',
+    call_type: 'all',
+    provider: 'all'
+  });
   
   const { data: agents } = useAgents();
-  const { data: execution, isLoading: isExecutionLoading } = useExecution(queryId);
-  const { data: agentExecutions, isLoading: isListLoading } = useAgentExecutions(selectedAgentId || null);
+  const { data: execution, isLoading: isExecutionLoading } = useExecution(queryId, selectedAgentId);
+  const { data: agentExecutions, isLoading: isListLoading, refetch: refetchAgentExecutions } = useAgentExecutions(
+    selectedAgentId || null,
+    selectedAgentId ? {
+      ...filters,
+      batch_id: selectedBatchId !== 'all-batches' ? selectedBatchId : undefined,
+      from: dateRange?.from?.toISOString(),
+      to: dateRange?.to?.toISOString()
+    } : undefined
+  );
+
+  // Ensure agent ID from URL is properly set when agents load
+  useEffect(() => {
+    if (agentIdParam && agents && agents.length > 0) {
+      const agentExists = agents.some((agent: any) => String(agent.id) === agentIdParam);
+      if (agentExists && selectedAgentId !== agentIdParam) {
+        setSelectedAgentId(agentIdParam);
+      }
+    }
+  }, [agentIdParam, agents]);
+
+  const { toast } = useToast();
+  const [isStopping, setIsStopping] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [stoppingCallId, setStoppingCallId] = useState<string | null>(null);
+
+  const handleStopCall = async (executionId: string, status: string) => {
+    const statusLower = String(status || '').toLowerCase();
+    if (!['queued', 'scheduled'].includes(statusLower)) {
+      return toast({ title: 'Cannot stop', description: 'Only queued or scheduled calls can be stopped', variant: 'destructive' });
+    }
+    setStoppingCallId(executionId);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/bolna/call/${executionId}/stop`, { 
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (!res.ok) throw new Error('Failed to stop call');
+      toast({ title: 'Call stopped', description: 'Call has been stopped successfully' });
+      await refetchAgentExecutions();
+    } catch (err: any) {
+      toast({ title: 'Stop failed', description: err?.message || 'Unable to stop call', variant: 'destructive' });
+    } finally {
+      setStoppingCallId(null);
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (!selectedAgentId) return;
+    try {
+      await refetchAgentExecutions();
+      toast({ title: 'Refreshed', description: 'Execution list refreshed.' });
+    } catch (err: any) {
+      toast({ title: 'Refresh failed', description: err?.message || String(err), variant: 'destructive' });
+    }
+  };
+
+  const handleStopQueued = async () => {
+    if (!selectedAgentId) return;
+    if (!window.confirm('Stop all queued calls for this agent?')) return;
+    setIsStopping(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/bolna/agents/${selectedAgentId}/stop`, { 
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to stop queued calls');
+      }
+      toast({ title: 'Stopped', description: 'Queued calls stopped.' });
+      await refetchAgentExecutions();
+    } catch (err: any) {
+      toast({ title: 'Stop failed', description: err?.message || String(err), variant: 'destructive' });
+    } finally {
+      setIsStopping(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!selectedAgentId) return;
+    setIsExporting(true);
+    try {
+      const query = new URLSearchParams();
+      if (dateRange?.from) query.set('from', dateRange.from.toISOString());
+      if (dateRange?.to) query.set('to', dateRange.to.toISOString());
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/bolna/agents/${selectedAgentId}/export?${query.toString()}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to export executions');
+      }
+      const csv = await res.text();
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `agent-${selectedAgentId}-executions.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Downloaded', description: 'CSV downloaded.' });
+    } catch (err: any) {
+      toast({ title: 'Download failed', description: err?.message || String(err), variant: 'destructive' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,8 +193,8 @@ export default function Executions() {
       <div className="flex flex-col gap-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Agent conversations</h1>
-            <p className="text-sm text-muted-foreground">Displays all historical conversations with agents</p>
+            <h1 className="text-2xl font-bold tracking-tight">Agent Conversations</h1>
+            <p className="text-sm text-muted-foreground">View and manage all historical conversations with agents</p>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-muted-foreground">Available balance: <span className="text-foreground">$4.86</span></span>
@@ -64,27 +204,59 @@ export default function Executions() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+          <Select value={selectedAgentId || ""} onValueChange={setSelectedAgentId}>
             <SelectTrigger className="w-[240px] h-10 bg-white">
-              <SelectValue placeholder="All Agents" />
+              <SelectValue placeholder="Select Agent" />
             </SelectTrigger>
             <SelectContent>
               {agents?.map((agent: any) => (
-                <SelectItem key={agent.id} value={agent.id}>{agent.agent_config?.agent_name}</SelectItem>
+                <SelectItem key={agent.id} value={String(agent.id)}>{agent.agent_config?.agent_name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select defaultValue="all-batches">
+          <Select value={selectedBatchId} onValueChange={setSelectedBatchId}>
             <SelectTrigger className="w-[180px] h-10 bg-white"><SelectValue placeholder="Choose batch" /></SelectTrigger>
-            <SelectContent><SelectItem value="all-batches">All Batches</SelectItem></SelectContent>
+            <SelectContent>
+              <SelectItem value="all-batches">All Batches</SelectItem>
+              {batchIdParam && <SelectItem value={batchIdParam}>Batch {batchIdParam.slice(0, 8)}...</SelectItem>}
+            </SelectContent>
           </Select>
-          <div className="h-10 px-3 flex items-center bg-white border rounded-md text-sm text-muted-foreground">
-            Jan 09, 2026 - Jan 16, 2026
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-10 gap-2 bg-white">
+                <Calendar className="w-4 h-4" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    `${format(dateRange.from, "MMM dd, yyyy")} - ${format(dateRange.to, "MMM dd, yyyy")}`
+                  ) : (
+                    format(dateRange.from, "MMM dd, yyyy")
+                  )
+                ) : (
+                  "Pick a date range"
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange?.from}
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2"><RefreshCw className="w-4 h-4" /> Refresh</Button>
-            <Button variant="outline" size="sm" className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"><StopCircle className="w-4 h-4" /> Stop queued calls</Button>
-            <Button variant="outline" size="sm" className="gap-2"><Download className="w-4 h-4" /> Download records</Button>
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleRefresh} disabled={!selectedAgentId || isLoading}>
+              <RefreshCw className="w-4 h-4" /> Refresh
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleStopQueued} disabled={!selectedAgentId || isStopping}>
+              {isStopping ? <Loader2 className="w-4 h-4 animate-spin" /> : <StopCircle className="w-4 h-4" />} Stop queued
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleDownload} disabled={!selectedAgentId || isExporting}>
+              {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Download
+            </Button>
           </div>
         </div>
 
@@ -96,10 +268,34 @@ export default function Executions() {
                 <h2 className="text-lg font-semibold">Performance Metrics</h2>
               </div>
               <div className="flex items-center gap-2">
-                <Select defaultValue="none"><SelectTrigger className="w-32 h-9 bg-white"><SelectValue placeholder="Group by" /></SelectTrigger></Select>
-                <Select defaultValue="all"><SelectTrigger className="w-32 h-9 bg-white"><SelectValue placeholder="Status" /></SelectTrigger></Select>
-                <Select defaultValue="all"><SelectTrigger className="w-32 h-9 bg-white"><SelectValue placeholder="Call type" /></SelectTrigger></Select>
-                <Select defaultValue="all"><SelectTrigger className="w-32 h-9 bg-white"><SelectValue placeholder="Provider" /></SelectTrigger></Select>
+                <Select value={filters.status} onValueChange={(value) => setFilters({...filters, status: value, page_number: 1})}>
+                  <SelectTrigger className="w-32 h-9 bg-white"><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="in-progress">In Progress</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                    <SelectItem value="no-answer">No Answer</SelectItem>
+                    <SelectItem value="busy">Busy</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filters.call_type} onValueChange={(value) => setFilters({...filters, call_type: value, page_number: 1})}>
+                  <SelectTrigger className="w-32 h-9 bg-white"><SelectValue placeholder="Call type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="inbound">Inbound</SelectItem>
+                    <SelectItem value="outbound">Outbound</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filters.provider} onValueChange={(value) => setFilters({...filters, provider: value, page_number: 1})}>
+                  <SelectTrigger className="w-32 h-9 bg-white"><SelectValue placeholder="Provider" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Providers</SelectItem>
+                    <SelectItem value="plivo">Plivo</SelectItem>
+                    <SelectItem value="twilio">Twilio</SelectItem>
+                    <SelectItem value="websocket">WebSocket</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -167,50 +363,54 @@ export default function Executions() {
           </div>
         )}
 
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b bg-slate-50/30">
-            <div className="relative max-w-sm">
+        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+          <div className="p-3 border-b flex items-center justify-between">
+            <div className="relative w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
               <Input 
-                placeholder="Search by Execution id" 
-                className="pl-9 h-9 bg-white border-slate-200"
+                placeholder="Search by Execution ID" 
+                className="pl-9 h-9 bg-white"
                 value={searchId}
                 onChange={(e) => setSearchId(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && setQueryId(searchId)}
               />
             </div>
+            {agentExecutions?.data && agentExecutions.data.length > 0 && (
+              <span className="text-sm text-slate-500">{agentExecutions.total || agentExecutions.data.length} execution{(agentExecutions.total || agentExecutions.data.length) !== 1 ? 's' : ''}</span>
+            )}
           </div>
           
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-slate-50/50">
+            <Table className="min-w-[1800px]">
+              <TableHeader className="sticky top-0 bg-white z-10 border-b">
                 <TableRow>
-                  <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Execution ID</TableHead>
-                  <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500">User Number</TableHead>
-                  <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Conversation type</TableHead>
-                  <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500 text-center">Duration (s)</TableHead>
-                  <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Hangup by</TableHead>
-                  <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Batch</TableHead>
-                  <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Timestamp</TableHead>
-                  <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500 text-right">Cost</TableHead>
-                  <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500 text-center">Status</TableHead>
-                  <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Conversation data</TableHead>
-                  <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500 text-center">Trace data</TableHead>
-                  <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500 text-center">Raw data</TableHead>
+                  <TableHead className="text-xs uppercase text-slate-500 w-[180px]">Execution ID</TableHead>
+                  <TableHead className="text-xs uppercase text-slate-500 w-[150px]">User Number</TableHead>
+                  <TableHead className="text-xs uppercase text-slate-500 w-[180px]">Conversation type</TableHead>
+                  <TableHead className="text-xs uppercase text-slate-500 text-center w-[120px]">Duration (s)</TableHead>
+                  <TableHead className="text-xs uppercase text-slate-500 w-[120px]">Hangup by</TableHead>
+                  <TableHead className="text-xs uppercase text-slate-500 w-[120px]">Batch</TableHead>
+                  <TableHead className="text-xs uppercase text-slate-500 w-[180px]">Timestamp</TableHead>
+                  <TableHead className="text-xs uppercase text-slate-500 text-right w-[100px]">Cost</TableHead>
+                  <TableHead className="text-xs uppercase text-slate-500 text-center w-[120px]">Status</TableHead>
+                  <TableHead className="text-xs uppercase text-slate-500 text-center w-[80px]">Action</TableHead>
+                  <TableHead className="text-xs uppercase text-slate-500 w-[150px]">Conversation data</TableHead>
+                  <TableHead className="text-xs uppercase text-slate-500 text-center w-[100px]">Trace data</TableHead>
+                  <TableHead className="text-xs uppercase text-slate-500 text-center w-[100px]">Raw data</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  [1, 2, 3].map(i => (
-                    <TableRow key={i}><TableCell colSpan={12} className="h-16 animate-pulse bg-slate-50/50" /></TableRow>
-                  ))
+                  <TableRow><TableCell colSpan={13} className="h-32 text-center"><Loader2 className="w-6 h-6 animate-spin text-slate-400 mx-auto" /></TableCell></TableRow>
+                ) : !selectedAgentId ? (
+                  <TableRow><TableCell colSpan={13} className="h-32 text-center text-slate-400 text-sm">Please select an agent to view conversation history</TableCell></TableRow>
                 ) : agentExecutions?.data?.length > 0 ? (
                   agentExecutions.data.map((exec: any) => (
                     <TableRow key={exec.id} className="hover:bg-slate-50/80 transition-colors">
                       <TableCell className="font-mono text-[11px] text-slate-600">
                         <div className="flex items-center gap-2">
-                          {exec.id.slice(0, 8)}...
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400" onClick={() => navigator.clipboard.writeText(exec.id)}>
+                          {String(exec.id).slice(0, 8)}...
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400" onClick={() => navigator.clipboard.writeText(String(exec.id))}>
                             <Download className="w-3 h-3 rotate-180" />
                           </Button>
                         </div>
@@ -228,69 +428,148 @@ export default function Executions() {
                       </TableCell>
                       <TableCell className="text-[13px] font-bold text-right">${((exec.total_cost || 0)/100).toFixed(3)}</TableCell>
                       <TableCell className="text-center"><StatusBadge status={exec.status} /></TableCell>
+                      <TableCell className="text-center">
+                        {['queued', 'scheduled'].includes(String(exec.status || '').toLowerCase()) && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleStopCall(String(exec.id), exec.status)}
+                            disabled={stoppingCallId === String(exec.id)}
+                            title="Stop call"
+                          >
+                            {stoppingCallId === String(exec.id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <StopCircle className="w-4 h-4" />}
+                          </Button>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Button 
                           variant="secondary" 
                           size="sm" 
                           className="h-8 gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 border-none shadow-none text-[11px] font-bold px-3"
-                          onClick={() => setQueryId(exec.id)}
+                          onClick={() => {
+                            setQueryId(String(exec.id));
+                            setShowConversationDialog(true);
+                          }}
                         >
-                          Recordings <ExternalLink className="w-3 h-3" />
+                          View Details <ExternalLink className="w-3 h-3" />
                         </Button>
                       </TableCell>
-                      <TableCell className="text-center"><Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400"><ExternalLink className="w-4 h-4" /></Button></TableCell>
-                      <TableCell className="text-center"><Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400"><FileText className="w-4 h-4" /></Button></TableCell>
+                      <TableCell className="text-center">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-slate-400"
+                          onClick={() => {
+                            setQueryId(String(exec.id));
+                            setShowTraceDialog(true);
+                          }}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-slate-400"
+                          onClick={() => {
+                            setQueryId(String(exec.id));
+                            setShowRawDialog(true);
+                          }}
+                        >
+                          <FileText className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={12} className="h-32 text-center text-slate-400 text-sm italic">No records found</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={13} className="h-32 text-center text-slate-400 text-sm">No records found</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
           
-          <div className="p-4 border-t bg-slate-50/30 flex items-center justify-between">
+          <div className="p-3 border-t flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-[12px] text-slate-500">Rows per page</span>
-              <Select defaultValue="20"><SelectTrigger className="w-16 h-8 bg-white text-[12px]"><SelectValue /></SelectTrigger></Select>
+              <Select value={filters.page_size.toString()} onValueChange={(value) => setFilters({...filters, page_size: parseInt(value), page_number: 1})}>
+                <SelectTrigger className="w-16 h-8 bg-white text-[12px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-[12px] text-slate-500">Page 1 of 1</span>
+              <span className="text-[12px] text-slate-500">
+                Page {filters.page_number} of {Math.ceil((agentExecutions?.total || 0) / filters.page_size) || 1}
+              </span>
               <div className="flex gap-1">
-                <Button variant="outline" size="icon" className="h-8 w-8 text-slate-400" disabled><span>«</span></Button>
-                <Button variant="outline" size="icon" className="h-8 w-8 text-slate-400" disabled><span>‹</span></Button>
-                <Button variant="outline" size="icon" className="h-8 w-8 text-slate-400" disabled><span>›</span></Button>
-                <Button variant="outline" size="icon" className="h-8 w-8 text-slate-400" disabled><span>»</span></Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-8 w-8" 
+                  disabled={filters.page_number <= 1}
+                  onClick={() => setFilters({...filters, page_number: 1})}
+                >
+                  <span>«</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-8 w-8" 
+                  disabled={filters.page_number <= 1}
+                  onClick={() => setFilters({...filters, page_number: filters.page_number - 1})}
+                >
+                  <span>‹</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-8 w-8" 
+                  disabled={!agentExecutions?.has_more}
+                  onClick={() => setFilters({...filters, page_number: filters.page_number + 1})}
+                >
+                  <span>›</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-8 w-8" 
+                  disabled={!agentExecutions?.has_more}
+                  onClick={() => setFilters({...filters, page_number: Math.ceil((agentExecutions?.total || 0) / filters.page_size) || 1})}
+                >
+                  <span>»</span>
+                </Button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Detail View Modal-like Overlay */}
-        {execution && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setQueryId(null)}>
-            <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-              <div className="p-6 border-b flex items-center justify-between bg-white sticky top-0">
-                <div>
-                  <h2 className="text-xl font-bold">Execution Detail</h2>
-                  <p className="text-sm font-mono text-slate-400">ID: {execution.id}</p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => setQueryId(null)}><X className="w-5 h-5" /></Button>
-              </div>
-              <div className="flex-1 overflow-auto p-8 space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Card className="border-slate-100"><CardContent className="pt-6"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Status</p><StatusBadge status={execution.status} /></CardContent></Card>
-                  <Card className="border-slate-100"><CardContent className="pt-6"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Duration</p><p className="text-2xl font-bold">{execution.conversation_time || 0}s</p></CardContent></Card>
-                  <Card className="border-slate-100"><CardContent className="pt-6"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Cost</p><p className="text-2xl font-bold">${((execution.total_cost || 0)/100).toFixed(4)}</p></CardContent></Card>
-                </div>
-                <Card className="border-slate-100">
-                  <CardHeader><CardTitle className="text-sm flex items-center gap-2"><MessageSquare className="w-4 h-4 text-blue-500" /> Transcript</CardTitle></CardHeader>
-                  <CardContent><div className="bg-slate-50 p-6 rounded-xl border border-slate-100 text-[14px] leading-relaxed font-sans max-h-[300px] overflow-auto">{execution.transcript || "No transcript available."}</div></CardContent>
-                </Card>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Conversation Dialog */}
+        <ConversationDialog 
+          open={showConversationDialog} 
+          onOpenChange={setShowConversationDialog}
+          execution={execution}
+        />
+        
+        {/* Trace Data Dialog */}
+        <TraceDataDialog 
+          open={showTraceDialog} 
+          onOpenChange={setShowTraceDialog}
+          executionId={queryId}
+          agentId={selectedAgentId}
+        />
+        
+        {/* Raw Data Dialog */}
+        <RawDataDialog 
+          open={showRawDialog} 
+          onOpenChange={setShowRawDialog}
+          executionId={queryId}
+          agentId={selectedAgentId}
+        />
       </div>
     </Layout>
   );

@@ -1,0 +1,305 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, buildUrl } from "@shared/routes";
+import type { CreateAgentRequest, UpdateAgentRequest, MakeCallRequest } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+
+// === AGENTS ===
+
+async function getAuthHeader() {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No authentication token found");
+  return { "Authorization": `Bearer ${token}` };
+}
+
+export function useAgents() {
+  return useQuery({
+    queryKey: [api.bolna.agents.list.path],
+    queryFn: async () => {
+      const headers = await getAuthHeader();
+      const res = await fetch(api.bolna.agents.list.path, { headers });
+      if (res.status === 401) throw new Error("Unauthorized");
+      if (!res.ok) throw new Error((await res.json()).message || "Failed to fetch agents");
+      return await res.json();
+    },
+  });
+}
+
+export function useAgent(id: string | null) {
+  return useQuery({
+    queryKey: [api.bolna.agents.get.path, id],
+    enabled: !!id,
+    queryFn: async () => {
+      if (!id) return null;
+      const headers = await getAuthHeader();
+      const url = buildUrl(api.bolna.agents.get.path, { id });
+      const res = await fetch(url, { headers });
+      if (!res.ok) throw new Error((await res.json()).message || "Failed to fetch agent details");
+      return await res.json();
+    },
+  });
+}
+
+export function useCreateAgent() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: CreateAgentRequest) => {
+      const headers = Object.assign({ "Content-Type": "application/json" }, await getAuthHeader());
+      const res = await fetch(api.bolna.agents.create.path, {
+        method: api.bolna.agents.create.method,
+        headers,
+        body: JSON.stringify(data),
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create agent");
+      }
+      return await res.json();
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.bolna.agents.list.path] });
+      toast({ title: "Agent Created", description: "Your new agent is ready." });
+    },
+    onError: (err) => {
+      toast({ 
+        title: "Creation Failed", 
+        description: err.message, 
+        variant: "destructive" 
+      });
+    }
+  });
+}
+
+export function useUpdateAgent() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateAgentRequest }) => {
+      const headers = Object.assign({ "Content-Type": "application/json" }, await getAuthHeader());
+      const url = buildUrl(api.bolna.agents.update.path, { id });
+      const res = await fetch(url, {
+        method: api.bolna.agents.update.method,
+        headers,
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to update agent");
+      }
+      return await res.json();
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: [api.bolna.agents.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.bolna.agents.get.path, id] });
+      toast({ title: "Agent Updated", description: "Changes have been saved." });
+    },
+    onError: (err) => {
+      toast({ 
+        title: "Update Failed", 
+        description: err.message, 
+        variant: "destructive" 
+      });
+    }
+  });
+}
+
+export function useDeleteAgent() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const headers = await getAuthHeader();
+      const url = buildUrl(api.bolna.agents.delete.path, { id });
+      const res = await fetch(url, {
+        method: api.bolna.agents.delete.method,
+        headers,
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to delete agent");
+      }
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.bolna.agents.list.path] });
+      toast({ title: "Agent Deleted", description: "The agent has been removed." });
+    },
+    onError: (err) => {
+      toast({ 
+        title: "Delete Failed", 
+        description: err.message, 
+        variant: "destructive" 
+      });
+    }
+  });
+}
+
+export function useAgentExecutions(agentId: string | null) {
+  return useQuery({
+    queryKey: [api.bolna.agents.executions.path, agentId],
+    enabled: !!agentId,
+    queryFn: async () => {
+      if (!agentId) return null;
+      const headers = await getAuthHeader();
+      const url = buildUrl(api.bolna.agents.executions.path, { id: agentId });
+      const res = await fetch(url, { headers });
+      if (!res.ok) throw new Error((await res.json()).message || "Failed to fetch executions");
+      return await res.json();
+    },
+  });
+}
+
+// === CALLS ===
+
+export function useMakeCall() {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: MakeCallRequest) => {
+      const headers = Object.assign({ "Content-Type": "application/json" }, await getAuthHeader());
+      const res = await fetch(api.bolna.calls.make.path, {
+        method: api.bolna.calls.make.method,
+        headers,
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to initiate call");
+      }
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Call Initiated", 
+        description: `Execution ID: ${data.execution_id}` 
+      });
+    },
+    onError: (err) => {
+      toast({ 
+        title: "Call Failed", 
+        description: err.message, 
+        variant: "destructive" 
+      });
+    }
+  });
+}
+
+// === EXECUTIONS ===
+
+export function useExecution(id: string | null) {
+  return useQuery({
+    queryKey: [api.bolna.executions.get.path, id],
+    enabled: !!id,
+    queryFn: async () => {
+      if (!id) return null;
+      const headers = await getAuthHeader();
+      const url = buildUrl(api.bolna.executions.get.path, { id });
+      const res = await fetch(url, { headers });
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error((await res.json()).message || "Failed to fetch execution");
+      return await res.json();
+    },
+  });
+}
+
+// === BATCHES ===
+
+export function useBatches() {
+  return useQuery({
+    queryKey: [api.bolna.agents.batches.path],
+    queryFn: async () => {
+      const headers = await getAuthHeader();
+      const res = await fetch(api.bolna.agents.batches.path, { headers });
+      if (!res.ok) throw new Error((await res.json()).message || "Failed to fetch batches");
+      return await res.json();
+    },
+  });
+}
+
+export function useCreateBatch() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const headers = Object.assign({ "Content-Type": "application/json" }, await getAuthHeader());
+      const res = await fetch(api.bolna.agents.createBatch.path, {
+        method: api.bolna.agents.createBatch.method,
+        headers,
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error((await res.json()).message || "Failed to create batch");
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.bolna.agents.batches.path] });
+      toast({ title: "Batch Created", description: "Your batch processing has started." });
+    },
+  });
+}
+
+// === KNOWLEDGEBASE ===
+
+export function useKnowledgebases() {
+  return useQuery({
+    queryKey: [api.bolna.knowledgebase.list.path],
+    queryFn: async () => {
+      const headers = await getAuthHeader();
+      const res = await fetch(api.bolna.knowledgebase.list.path, { headers });
+      if (!res.ok) throw new Error((await res.json()).message || "Failed to fetch knowledgebases");
+      return await res.json();
+    },
+  });
+}
+
+export function useCreateKnowledgebase() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const headers = Object.assign({ "Content-Type": "application/json" }, await getAuthHeader());
+      const res = await fetch(api.bolna.knowledgebase.create.path, {
+        method: api.bolna.knowledgebase.create.method,
+        headers,
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error((await res.json()).message || "Failed to create knowledgebase");
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.bolna.knowledgebase.list.path] });
+      toast({ title: "Knowledge Base Created", description: "Your document is being processed." });
+    },
+  });
+}
+
+export function useDeleteKnowledgebase() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const headers = await getAuthHeader();
+      const url = buildUrl(api.bolna.knowledgebase.delete.path, { id });
+      const res = await fetch(url, {
+        method: api.bolna.knowledgebase.delete.method,
+        headers,
+      });
+      if (!res.ok) throw new Error((await res.json()).message || "Failed to delete knowledgebase");
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.bolna.knowledgebase.list.path] });
+      toast({ title: "Knowledge Base Deleted", description: "The document has been removed." });
+    },
+  });
+}

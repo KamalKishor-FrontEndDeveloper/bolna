@@ -10,25 +10,34 @@ export function useApiKey() {
   const { data: hasKey, isLoading } = useQuery({
     queryKey: [api.keys.get.path, keyName],
     queryFn: async () => {
-      // We assume the API returns 200 with { value: string } if it exists
-      // Using a simple fetch here to check existence
-      const res = await fetch(api.keys.get.path.replace(":key", keyName));
-      if (!res.ok) return false;
+      const headers: Record<string,string> = {};
+      const res = await fetch(api.keys.get.path.replace(":key", keyName), { headers });
+      if (!res.ok) {
+        if (res.status === 401) return false;
+        throw new Error("Failed to fetch API key status");
+      }
       const data = await res.json();
-      return !!data.value; // Return true if value exists
+      return !!data.value;
     },
   });
 
   const saveKey = useMutation({
     mutationFn: async (keyValue: string) => {
+      const headers: Record<string,string> = { "Content-Type": "application/json" };
+
+      const token = localStorage.getItem('token');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const res = await fetch(api.keys.save.path, {
         method: api.keys.save.method,
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ key: keyName, value: keyValue }),
       });
       
       if (!res.ok) {
-        throw new Error("Failed to save API key");
+        if (res.status === 401) throw new Error("Unauthorized");
+        const err = await res.json().catch(() => ({ message: "Failed to save API key" }));
+        throw new Error(err.message || "Failed to save API key");
       }
       return res.json();
     },
@@ -39,10 +48,10 @@ export function useApiKey() {
         description: "API Key saved successfully.",
       });
     },
-    onError: () => {
+    onError: (err: any) => {
       toast({
         title: "Error",
-        description: "Failed to save API Key. Please try again.",
+        description: err?.message || "Failed to save API Key. Please try again.",
         variant: "destructive",
       });
     },
