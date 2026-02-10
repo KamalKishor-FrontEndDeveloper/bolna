@@ -10,8 +10,15 @@ const { Pool } = pg;
 async function runSafeMigration() {
   console.log('🔄 Running safe multi-tenant migration...');
 
+  const ssl = process.env.DATABASE_SSL === 'true'
+    ? { rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false' }
+    : process.env.NODE_ENV === 'production'
+      ? { rejectUnauthorized: true }
+      : { rejectUnauthorized: false };
+
   const pool = new Pool({ 
-    connectionString: process.env.DATABASE_URL 
+    connectionString: process.env.DATABASE_URL,
+    ssl,
   });
   const db = drizzle(pool);
 

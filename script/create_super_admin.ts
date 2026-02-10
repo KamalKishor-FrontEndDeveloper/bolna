@@ -18,7 +18,13 @@ async function main() {
     process.exit(1);
   }
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const ssl = process.env.DATABASE_SSL === 'true'
+    ? { rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false' }
+    : process.env.NODE_ENV === 'production'
+      ? { rejectUnauthorized: true }
+      : { rejectUnauthorized: false };
+
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl });
   const db = drizzle(pool);
 
   try {

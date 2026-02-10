@@ -11,8 +11,15 @@ const { Pool } = pg;
 async function createWorkingDemoUser() {
   console.log('🔄 Creating working demo user...');
 
+  const ssl = process.env.DATABASE_SSL === 'true'
+    ? { rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false' }
+    : process.env.NODE_ENV === 'production'
+      ? { rejectUnauthorized: true }
+      : { rejectUnauthorized: false };
+
   const pool = new Pool({ 
-    connectionString: process.env.DATABASE_URL 
+    connectionString: process.env.DATABASE_URL,
+    ssl,
   });
   const db = drizzle(pool);
 
