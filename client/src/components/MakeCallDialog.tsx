@@ -34,7 +34,7 @@ export default function MakeCallDialog({ agentId, trigger }: MakeCallDialogProps
     if (fromPhone) payload.from_phone_number = fromPhone;
     if (scheduledAt) {
       // Convert local datetime-local to server-friendly ISO (no milliseconds Z)
-      const formatIsoForBolna = (date: Date) => date.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+      const formatIsoForThinkVoice= (date: Date) => date.toISOString().replace(/\.\d{3}Z$/, '+00:00');
       payload.scheduled_at = formatIsoForBolna(new Date(scheduledAt));
     }
     if (bypassGuardrails) payload.bypass_call_guardrails = true;

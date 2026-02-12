@@ -557,31 +557,66 @@ export function useCreateKnowledgebase() {
 
   return useMutation({
     mutationFn: async (data: any) => {
+      console.log('[useCreateKnowledgebase] Starting mutation with data type:', data instanceof FormData ? 'FormData' : 'JSON');
+      
       // If data is a FormData instance, send it as multipart without setting Content-Type
       if (data instanceof FormData) {
         const headers = await getAuthHeader();
+        console.log('[useCreateKnowledgebase] Sending FormData to:', api.bolna.knowledgebase.create.path);
+        
         const res = await fetch(api.bolna.knowledgebase.create.path, {
           method: api.bolna.knowledgebase.create.method,
           headers,
           body: data as any,
         });
-        if (!res.ok) throw new Error((await res.json()).message || "Failed to create knowledgebase");
-        return await res.json();
+        
+        console.log('[useCreateKnowledgebase] Response status:', res.status, res.statusText);
+        
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ message: 'Failed to create knowledge base' }));
+          console.error('[useCreateKnowledgebase] Error response:', errorData);
+          throw new Error(errorData.message || 'Failed to create knowledge base');
+        }
+        
+        const result = await res.json();
+        console.log('[useCreateKnowledgebase] Success response:', result);
+        return result;
       }
 
+      // JSON payload (URL-based)
+      console.log('[useCreateKnowledgebase] Sending JSON to:', api.bolna.knowledgebase.create.path);
       const headers = Object.assign({ "Content-Type": "application/json" }, await getAuthHeader());
       const res = await fetch(api.bolna.knowledgebase.create.path, {
         method: api.bolna.knowledgebase.create.method,
         headers,
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error((await res.json()).message || "Failed to create knowledgebase");
-      return await res.json();
+      
+      console.log('[useCreateKnowledgebase] Response status:', res.status, res.statusText);
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'Failed to create knowledge base' }));
+        console.error('[useCreateKnowledgebase] Error response:', errorData);
+        throw new Error(errorData.message || 'Failed to create knowledge base');
+      }
+      
+      const result = await res.json();
+      console.log('[useCreateKnowledgebase] Success response:', result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('[useCreateKnowledgebase] Mutation succeeded, invalidating queries');
       queryClient.invalidateQueries({ queryKey: [api.bolna.knowledgebase.list.path] });
       toast({ title: "Knowledge Base Created", description: "Your document is being processed." });
     },
+    onError: (err: any) => {
+      console.error('[useCreateKnowledgebase] Mutation failed:', err);
+      toast({ 
+        title: 'Creation failed', 
+        description: err?.message || 'Failed to create knowledge base', 
+        variant: 'destructive' 
+      });
+    }
   });
 }
 

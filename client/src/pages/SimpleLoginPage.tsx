@@ -29,7 +29,7 @@ export default function SimpleLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Bolna AI</CardTitle>
+          <CardTitle className="text-2xl font-bold">ThinkVoiceAI</CardTitle>
           <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

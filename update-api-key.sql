@@ -1,4 +1,4 @@
--- Update the Bolna API key in the database
+-- Update the ThinkVoiceAPI key in the database
 -- Replace 'YOUR_NEW_BOLNA_API_KEY' with your actual valid key from https://bolna.ai
 
 UPDATE api_keys 

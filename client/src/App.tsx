@@ -19,6 +19,8 @@ import VoiceLab from "@/pages/VoiceLab";
 import Workspace from "@/pages/Workspace";
 import LoginPage from "@/pages/LoginPage";
 import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
+import ManageTenant from "@/pages/ManageTenant";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 function Router() {
   const { user, isSuperAdmin, isLoading, tenant, isImpersonating } = useAuth();
@@ -27,7 +29,7 @@ function Router() {
   console.log('Router state:', { user: !!user, isSuperAdmin, isLoading });
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return <LoadingSpinner message="Authenticating..." subtitle="Please wait while we verify your session" />;
   }
 
   // If a tenant-prefixed route is used, ensure it matches the logged-in tenant unless super-admin
@@ -47,7 +49,14 @@ function Router() {
 
   if (isSuperAdmin) {
     console.log('Super admin detected, showing dashboard');
-    return <SuperAdminDashboard />;
+    return (
+      <Switch>
+        <Route path="/super-admin" component={SuperAdminDashboard} />
+        <Route path="/super-admin/tenants/:id" component={ManageTenant} />
+        <Route path="/" component={SuperAdminDashboard} />
+        <Route component={NotFound} />
+      </Switch>
+    );
   }
 
   console.log('Regular user, showing tenant dashboard');

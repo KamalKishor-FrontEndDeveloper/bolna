@@ -33,7 +33,7 @@ export default function AccountInfo() {
               <Input value={tenant?.status || ''} disabled className="capitalize" />
             </div>
             <div className="space-y-2">
-              <Label>Bolna Sub Account ID</Label>
+              <Label>ThinkVoiceSub Account ID</Label>
               <Input value={tenant?.bolna_sub_account_id || ''} disabled className="font-mono text-xs" />
             </div>
             <div className="space-y-2">

@@ -129,7 +129,7 @@ export default function MVPDashboard() {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-4">
               <Bot className="h-8 w-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-gray-900">Bolna AI Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900">ThinkVoiceAI Dashboard</h1>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">Welcome, {user?.name}</span>

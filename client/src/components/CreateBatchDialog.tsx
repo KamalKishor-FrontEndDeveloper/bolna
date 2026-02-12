@@ -32,6 +32,19 @@ export function CreateBatchDialog({ open, onOpenChange, agents, selectedAgentId 
     setScheduledAt(isoLocal);
   };
 
+  const downloadSampleCsv = () => {
+    const csvContent = "contact_number\n+1234567890\n+9876543210";
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "sample_batch_contacts.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!agentId || !file) return;
@@ -54,9 +67,9 @@ export function CreateBatchDialog({ open, onOpenChange, agents, selectedAgentId 
             alert('Unable to schedule: missing batch id from server response');
             return;
           }
-          // Convert local datetime-local value to an ISO format Bolna accepts (strip milliseconds, use +00:00)
-          const formatIsoForBolna = (date: Date) => date.toISOString().replace(/\.\d{3}Z$/, '+00:00');
-          const scheduledISO = formatIsoForBolna(new Date(scheduledAt));
+          // Convert local datetime-local value to an ISO format ThinkVoiceaccepts (strip milliseconds, use +00:00)
+          const formatIsoForThinkVoice= (date: Date) => date.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+          const scheduledISO = formatIsoForThinkVoice(new Date(scheduledAt));
           scheduleBatch({ batchId, scheduled_at: scheduledISO, bypass_call_guardrails: bypassGuardrails }, {
             onSuccess: () => {
               onOpenChange(false);
@@ -136,12 +149,17 @@ export function CreateBatchDialog({ open, onOpenChange, agents, selectedAgentId 
                   <div className="flex flex-col items-center gap-2">
                     <Upload className="w-6 h-6 text-slate-400" />
                     <p className="text-sm text-slate-500">Drag and drop your CSV here, or <span className="underline">click to browse</span></p>
-                    <p className="text-xs text-slate-400">Only .csv files are supported</p>
+                    <p className="text-xs text-slate-400">Required column: <span className="font-mono font-medium">contact_number</span></p>
                   </div>
                 )}
               </label>
             </div>
-            <p className="text-xs text-slate-500">Upload a CSV file with contact numbers and variables</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-slate-500">Upload a CSV file with contact numbers and variables</p>
+              <button type="button" onClick={downloadSampleCsv} className="text-xs text-blue-600 hover:underline font-medium">
+                Download sample CSV
+              </button>
+            </div>
           </div>
 
           <div className="space-y-1">
@@ -156,7 +174,7 @@ export function CreateBatchDialog({ open, onOpenChange, agents, selectedAgentId 
 
           <div className="space-y-2">
             <Label>Calls will be made via Plivo using:</Label>
-            <Input value="Bolna managed phone numbers" disabled />
+            <Input value="ThinkVoicemanaged phone numbers" disabled />
             <p className="text-xs text-slate-400">You can <a className="underline" href="/phone-numbers">purchase phone numbers</a> to start making calls from your own custom numbers.</p>
           </div>
 

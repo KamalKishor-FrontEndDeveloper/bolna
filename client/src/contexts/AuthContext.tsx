@@ -21,6 +21,8 @@ interface AuthContextType {
   isSuperAdmin: boolean;
   isImpersonating: boolean;
   impersonatorId: number | null;
+  wallet: number;
+  tierPlan: string | null;
   login: (email: string, password: string) => Promise<void>;
   loginSuperAdmin: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -37,6 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [impersonatorId, setImpersonatorId] = useState<number | null>(null);
+  const [wallet, setWallet] = useState(0);
+  const [tierPlan, setTierPlan] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -119,6 +123,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const data = await res.json();
           setUser(data.user);
           setTenant(data.tenant);
+          setWallet(data.wallet || 0);
+          setTierPlan(data.tier_plan || null);
           setIsSuperAdmin(false);
           return;
         } else {
@@ -134,6 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await tenantRes.json();
         setUser(data.user);
         setTenant(data.tenant);
+        setWallet(data.wallet || 0);
+        setTierPlan(data.tier_plan || null);
         setIsSuperAdmin(false);
         return;
       }
@@ -223,6 +231,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isSuperAdmin,
       isImpersonating,
       impersonatorId,
+      wallet,
+      tierPlan,
       login,
       loginSuperAdmin,
       logout,

@@ -16,7 +16,7 @@ function mapAxiosError(err: any) {
   if (err.response) {
     const status = err.response.status || 500;
     // Normalize message to a string (server may return structured JSON)
-    let message: any = err.response.data?.message ?? err.response.data ?? err.message ?? `Bolna API Error ${status}`;
+    let message: any = err.response.data?.message ?? err.response.data ?? err.message ?? `ThinkVoiceAPI Error ${status}`;
     if (typeof message !== 'string') {
       try {
         message = JSON.stringify(message);
@@ -37,7 +37,7 @@ export class BolnaService {
   private async initClient() {
     const apiKey = await storage.getApiKey("BOLNA_API_KEY");
     console.log('[BOLNA] Retrieved API key from database:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT FOUND');
-    if (!apiKey) throw new BolnaError("Bolna API Key not configured", 401);
+    if (!apiKey) throw new BolnaError("ThinkVoiceAPI Key not configured", 401);
 
     // Recreate client if API key changed
     if (this.client && this.cachedApiKey === apiKey) {
@@ -84,13 +84,13 @@ export class BolnaService {
     }
   }
 
-  // Create an agent for a specific sub-account. Accepts a mapped Bolna payload object
+  // Create an agent for a specific sub-account. Accepts a mapped ThinkVoicepayload object
   async createAgent(subAccountId: string, payload: any) {
     try {
       const client = await this.initClient();
       const headers = { "X-Sub-Account-Id": subAccountId };
       
-      // Validate required fields per Bolna v2 API spec
+      // Validate required fields per ThinkVoicev2 API spec
       if (!payload.agent_config || !payload.agent_prompts) {
         throw new BolnaError("Missing required fields: agent_config and agent_prompts", 400);
       }
@@ -186,7 +186,7 @@ export class BolnaService {
     }
   }
 
-  // Fetch a single agent's full details from Bolna (useful because list endpoints may omit some fields)
+  // Fetch a single agent's full details from ThinkVoice(useful because list endpoints may omit some fields)
   async getAgent(subAccountId: string, bolnaAgentId: string) {
     try {
       const client = await this.initClient();
@@ -198,7 +198,7 @@ export class BolnaService {
     }
   }
 
-  // List all agents for a sub-account (Bolna v2 endpoint: GET /v2/agent/all)
+  // List all agents for a sub-account (ThinkVoicev2 endpoint: GET /v2/agent/all)
   async listAgents(subAccountId?: string) {
     try {
       const client = await this.initClient();
@@ -210,7 +210,7 @@ export class BolnaService {
     }
   }
 
-  // Fetch available models and ASR configurations from Bolna (try several possible endpoints)
+  // Fetch available models and ASR configurations from ThinkVoice(try several possible endpoints)
   async getModels(subAccountId?: string) {
     const client = await this.initClient();
     const headers = subAccountId ? { "X-Sub-Account-Id": subAccountId } : undefined;
@@ -300,7 +300,7 @@ export class BolnaService {
     return fallback;
   }
 
-  // List all voices available to the account (GET /me/voices). If Bolna doesn't expose it, return a static list.
+  // List all voices available to the account (GET /me/voices). If ThinkVoicedoesn't expose it, return a static list.
   async getVoices(subAccountId?: string) {
     const client = await this.initClient();
     const headers = subAccountId ? { "X-Sub-Account-Id": subAccountId } : undefined;
@@ -329,9 +329,26 @@ export class BolnaService {
     try {
       const client = await this.initClient();
       const headers = subAccountId ? { "X-Sub-Account-Id": subAccountId } : undefined;
-      const res = await client.post('/user/model/custom', payload, { headers });
-      return res.data;
+      
+      // Try multiple possible endpoints
+      const endpoints = ['/user/model/custom', '/v2/model/custom', '/model/custom'];
+      
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`[BOLNA] Trying custom model endpoint: ${endpoint}`);
+          const res = await client.post(endpoint, payload, { headers });
+          console.log(`[BOLNA] Custom model added successfully via ${endpoint}:`, res.data);
+          return res.data;
+        } catch (err: any) {
+          if (err?.response?.status === 404 && endpoint !== endpoints[endpoints.length - 1]) {
+            console.log(`[BOLNA] ${endpoint} not found, trying next endpoint`);
+            continue;
+          }
+          throw err;
+        }
+      }
     } catch (err: any) {
+      console.error('[BOLNA] addCustomModel error:', err?.response?.data || err?.message);
       mapAxiosError(err);
     }
   }
@@ -380,8 +397,8 @@ export class BolnaService {
 
   // Create a knowledgebase using either a URL or uploaded file (POST /knowledgebase).
   // If `payload.url` is present, send a JSON body. If `payload.file` (Buffer) is present, send multipart/form-data.
-  async createKnowledgebase(subAccountId: string | undefined, payload: { url?: string; chunk_size?: number; similarity_top_k?: number; overlapping?: number; file?: { buffer: Buffer; filename?: string } }) {
-    // Validate inputs early to avoid forwarding invalid requests to upstream Bolna API
+  async createKnowledgebase(subAccountId: string | undefined, payload: { url?: string; chunk_size?: number; similarity_top_k?: number; overlapping?: number; file?: { buffer: Buffer; filename?: string }; knowledgebase_name?: string }) {
+    // Validate inputs early to avoid forwarding invalid requests to upstream ThinkVoiceAPI
     const hasUrl = !!(payload?.url && String(payload.url).trim().length > 0);
     const hasFile = !!(payload?.file && payload.file.buffer);
     if (!hasUrl && !hasFile) {
@@ -397,11 +414,14 @@ export class BolnaService {
         const body: any = {
           url: String(payload.url).trim()
         };
+        if (payload.knowledgebase_name) body.knowledgebase_name = payload.knowledgebase_name;
         if (payload.chunk_size) body.chunk_size = payload.chunk_size;
         if (payload.similarity_top_k) body.similarity_top_k = payload.similarity_top_k;
         if (payload.overlapping) body.overlapping = payload.overlapping;
 
+        console.log('[BOLNA] Creating knowledgebase with URL:', body);
         const res = await client.post('/knowledgebase', body, { headers });
+        console.log('[BOLNA] Knowledgebase created:', res.data);
         return res.data;
       }
 
@@ -410,18 +430,22 @@ export class BolnaService {
         const FormData = (await import('form-data')).default;
         const form = new FormData();
         form.append('file', payload.file.buffer, { filename: payload.file.filename || 'upload.pdf' });
+        if (payload.knowledgebase_name) form.append('knowledgebase_name', payload.knowledgebase_name);
         if (payload.chunk_size) form.append('chunk_size', String(payload.chunk_size));
         if (payload.similarity_top_k) form.append('similarity_top_k', String(payload.similarity_top_k));
         if (payload.overlapping) form.append('overlapping', String(payload.overlapping));
 
         const mergedHeaders = { ...(headers || {}), ...form.getHeaders() };
+        console.log('[BOLNA] Creating knowledgebase with file:', payload.file.filename);
         const res = await client.post('/knowledgebase', form as any, { headers: mergedHeaders as any, maxContentLength: Infinity, maxBodyLength: Infinity });
+        console.log('[BOLNA] Knowledgebase created:', res.data);
         return res.data;
       }
 
       // Should never reach here due to earlier validation
       throw new BolnaError("Must provide either 'file' or 'url' parameter", 400);
     } catch (err: any) {
+      console.error('[BOLNA] createKnowledgebase error:', err?.message || err);
       mapAxiosError(err);
     }
   }
@@ -649,12 +673,12 @@ export class BolnaService {
     }
   }
 
-  // List all executions for a sub-account - NOT SUPPORTED by Bolna API
-  // Bolna only provides /v2/agent/{agent_id}/executions
+  // List all executions for a sub-account - NOT SUPPORTED by ThinkVoiceAPI
+  // ThinkVoiceonly provides /v2/agent/{agent_id}/executions
   async listExecutions(subAccountId?: string) {
-    // This endpoint doesn't exist in Bolna API
+    // This endpoint doesn't exist in ThinkVoiceAPI
     // Return empty data to indicate no global executions endpoint
-    return { data: [], message: 'Bolna API only supports agent-specific executions' };
+    return { data: [], message: 'ThinkVoiceAPI only supports agent-specific executions' };
   }
 
   // List phone numbers

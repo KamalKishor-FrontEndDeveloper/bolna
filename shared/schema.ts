@@ -127,8 +127,8 @@ export const registerTenantSchema = z.object({
   admin_email: z.string().email(),
   admin_password: z.string().min(6),
   plan: z.enum(["starter", "pro", "enterprise"]).default("starter"),
-  // Optional: allow super-admin to supply an existing Bolna sub-account ID when automatic creation is disabled
-  sub_account_id: z.string().min(1).optional(),
+  // Optional: allow super-admin to supply an existing ThinkVoicesub-account ID when automatic creation is disabled
+  sub_account_id: z.string().min(1).optional().or(z.literal('')),
 });
 
 export const createUserSchema = z.object({
@@ -158,9 +158,9 @@ export const createCampaignSchema = z.object({
 
 export const insertExecutionSchema = createInsertSchema(executions);
 
-// === BOLNA API TYPES ===
+// === ThinkVoiceAPI TYPES ===
 
-// New Bolna API v2 structure
+// New ThinkVoiceAPI v2 structure
 export const llmAgentConfigSchema = z.object({
   agent_type: z.string().default("simple_llm_agent"),
   agent_flow_type: z.string().default("streaming"),
@@ -335,7 +335,7 @@ export const agentPromptsSchema = z.record(z.object({
 }));
 
 export const createAgentRequestSchema = z.union([
-  // New Bolna API v2 structure
+  // New ThinkVoiceAPI v2 structure
   z.object({
     agent_config: newAgentConfigSchema,
     agent_prompts: agentPromptsSchema,
@@ -420,7 +420,7 @@ export const searchPhoneNumberSchema = z.object({
 
 export const buyPhoneNumberRequestSchema = z.object({
   phone_number: z.string(),
-  // Some APIs might require address_id etc. Bolna docs just say POST /phone-numbers/buy with body?
+  // Some APIs might require address_id etc. ThinkVoicedocs just say POST /phone-numbers/buy with body?
   // Checking docs earlier: /docs/api-reference/phone-numbers/buy (POST)
   // We'll assume just phone_number for now or check docs if failed.
 });
@@ -429,7 +429,7 @@ export const buyPhoneNumberRequestSchema = z.object({
 
 export const setInboundAgentSchema = z.object({
   agent_id: z.string(),
-  phone_number_id: z.string(), // Bolna requires phone_number_id, not listing raw number
+  phone_number_id: z.string(), // ThinkVoicerequires phone_number_id, not listing raw number
 });
 
 export const unlinkInboundAgentSchema = z.object({

@@ -1,4 +1,4 @@
-# Bolna API to Agents.tsx Field Mapping Analysis
+# ThinkVoiceAPI to Agents.tsx Field Mapping Analysis
 
 ## ✅ Correctly Mapped Fields
 
@@ -166,4 +166,4 @@
 
 ## ✅ Status: COMPLETE
 
-All critical fields from the Bolna API are now mapped in the UI. The remaining fields are low-priority configuration options that are rarely used.
+All critical fields from the ThinkVoiceAPI are now mapped in the UI. The remaining fields are low-priority configuration options that are rarely used.

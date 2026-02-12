@@ -1,7 +1,7 @@
 # Multi-Account Sync Solution
 
 ## Your Problem
-You have 2 different Bolna accounts with different API keys:
+You have 2 different ThinkVoiceaccounts with different API keys:
 - **Account 1**: Has 3 agents
 - **Account 2**: Has 1 agent
 
@@ -10,13 +10,13 @@ When switching between accounts, the Settings page shows wrong agent count (3 in
 ## The Solution: Sync Feature
 
 ### What It Does
-The sync feature compares your local database with the current Bolna API and removes orphaned records.
+The sync feature compares your local database with the current ThinkVoiceAPI and removes orphaned records.
 
 ### How to Use
 
-#### Step 1: Switch Bolna Accounts
+#### Step 1: Switch ThinkVoiceAccounts
 1. Go to **Settings** page
-2. Enter your new Bolna API key
+2. Enter your new ThinkVoiceAPI key
 3. Click **Save**
 
 #### Step 2: Sync Database
@@ -30,12 +30,12 @@ The sync feature compares your local database with the current Bolna API and rem
 - No more confusion!
 
 ## What Gets Synced
-- ✅ **Agents**: Removes agents that don't exist in current Bolna account
+- ✅ **Agents**: Removes agents that don't exist in current ThinkVoiceaccount
 - ⚠️ **Phone Numbers**: Not yet implemented
 - ⚠️ **Campaigns**: Not yet implemented
 
 ## When to Sync
-- After changing your Bolna API key
+- After changing your ThinkVoiceAPI key
 - Before showing dashboard to stakeholders
 - When agent counts look wrong
 - Weekly maintenance (optional)
@@ -55,7 +55,7 @@ Response: { "message": "Sync completed", "success": true, "deleted": 2 }
 ```
 
 ### How It Works
-1. Fetches all agents from Bolna API
+1. Fetches all agents from ThinkVoiceAPI
 2. Compares with local database agents
 3. Deletes agents that exist in DB but not in Bolna
 4. Returns count of deleted records
@@ -64,25 +64,25 @@ Response: { "message": "Sync completed", "success": true, "deleted": 2 }
 
 ### Before Sync
 - Local DB: 3 agents (from Account 1)
-- Bolna API: 1 agent (Account 2)
+- ThinkVoiceAPI: 1 agent (Account 2)
 - Settings shows: 3 agents ❌
 
 ### After Sync
 - Local DB: 1 agent (synced with Account 2)
-- Bolna API: 1 agent (Account 2)
+- ThinkVoiceAPI: 1 agent (Account 2)
 - Settings shows: 1 agent ✅
 
 ## Troubleshooting
 
 ### "Sync failed" Error
-- Check your Bolna API key is valid
+- Check your ThinkVoiceAPI key is valid
 - Ensure you have internet connection
 - Try logging out and back in
 
 ### Count Still Wrong
 - Hard refresh the page (Ctrl+Shift+R)
 - Check if you're using the correct API key
-- Verify the key matches your intended Bolna account
+- Verify the key matches your intended ThinkVoiceaccount
 
 ## Future Improvements
 - Auto-sync on login

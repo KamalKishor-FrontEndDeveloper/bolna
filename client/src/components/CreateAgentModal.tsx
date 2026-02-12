@@ -116,7 +116,7 @@ export default function CreateAgentModal({ trigger, onCreated }: CreateAgentModa
       };
     }
 
-    // Transform to Bolna v2 API format
+    // Transform to ThinkVoicev2 API format
     const payload = {
       agent_config: {
         agent_name: data.agent_name,

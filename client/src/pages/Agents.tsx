@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Bot, Plus, Loader2, Mic, Cpu, Volume2, Search, Trash2, Save, MessageSquare, Wrench, BarChart3, Phone, Settings2, ArrowRight } from "lucide-react";
+import { Bot, Plus, Loader2, Mic, Cpu, Volume2, Search, Trash2, Save, MessageSquare, Wrench, BarChart3, Phone, Settings2, ArrowRight, Upload, FileText } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useForm } from "react-hook-form";
@@ -75,7 +75,7 @@ export default function Agents() {
 
   const selectedAgent = agents?.find((a: any) => String(a.id) === selectedAgentId);
 
-  // Fetch detailed agent data from Bolna when available (some fields like calling_guardrails are only present on the detail endpoint)
+  // Fetch detailed agent data from ThinkVoicewhen available (some fields like calling_guardrails are only present on the detail endpoint)
   const bolnaAgentId = selectedAgent?.bolna_agent_id || selectedAgent?.id || null;
   const { data: agentDetail, isLoading: isAgentLoading } = useAgent(bolnaAgentId);
   const selectedAgentFull = agentDetail || selectedAgent;
@@ -99,16 +99,16 @@ export default function Agents() {
   const synthesizerProvider = form.watch('agent_config.tasks.0.tools_config.synthesizer.provider' as any) || 'elevenlabs';
   console.log('[AGENTS] Current synthesizerProvider:', synthesizerProvider);
 
-  // Select first agent by default
+  // Select first agent by default when agents load
   useEffect(() => {
-    if (!selectedAgentId && agents && agents.length > 0) {
+    if (!isLoading && !selectedAgentId && agents && agents.length > 0) {
       setSelectedAgentId(String(agents[0].id));
     }
-  }, [agents, selectedAgentId]);
+  }, [agents, selectedAgentId, isLoading]);
 
   useEffect(() => {
     if (selectedAgent) {
-      // Map Bolna v2 API GET response to form structure
+      // Map ThinkVoicev2 API GET response to form structure
       const task = selectedAgent.tasks?.[0];
       const toolsConfig = task?.tools_config;
       const llmAgent = toolsConfig?.llm_agent;
@@ -118,7 +118,7 @@ export default function Agents() {
         agent_config: {
           agent_name: selectedAgent.agent_name,
           agent_welcome_message: selectedAgent.agent_welcome_message || "",
-          // Prefer webhook under agent_config (returned by Bolna v2), fallback to top-level if present
+          // Prefer webhook under agent_config (returned by ThinkVoicev2), fallback to top-level if present
           webhook_url: (selectedAgent.agent_config?.webhook_url ?? selectedAgent.webhook_url) || "",
           tasks: [
             {
@@ -323,13 +323,13 @@ export default function Agents() {
   const onSubmit = (data: CreateAgentRequest) => {
     console.log('[AGENTS] Form submitted', { selectedAgentId, data });
     
-    // Get actual agent data from Bolna to preserve existing structure
+    // Get actual agent data from ThinkVoiceto preserve existing structure
     const existingAgent = selectedAgentFull?.agent_config?.tasks?.[0] || selectedAgentFull?.tasks?.[0];
     const task = data.agent_config.tasks?.[0] as any;
     const tc = (task?.task_config as any) || {};
     const toolsCfg = (task?.tools_config as any) || {};
 
-    // Transform legacy form data to new Bolna API v2 structure
+    // Transform legacy form data to new ThinkVoiceAPI v2 structure
     const transformedData = {
       agent_config: {
         agent_name: data.agent_config.agent_name,
@@ -484,7 +484,7 @@ export default function Agents() {
   };
 
   const filteredAgents = agents?.filter((a: any) => 
-    a.agent_config?.agent_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    (a.agent_config?.agent_name || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -707,7 +707,7 @@ export default function Agents() {
                             <FormItem>
                               <FormLabel>Agent Welcome Message</FormLabel>
                               <FormControl>
-                                <Input className="text-lg h-14 px-4 bg-slate-50/50" placeholder="e.g. Hello, this is Poonam from Bolna University..." {...field} />
+                                <Input className="text-lg h-14 px-4 bg-slate-50/50" placeholder="e.g. Hello, this is Poonam from ThinkVoiceUniversity..." {...field} />
                               </FormControl>
                               <p className="text-xs text-slate-400">This will be the initial message from the agent. You can use variables here using {"{variable_name}"}</p>
                               <FormMessage />
@@ -2559,9 +2559,34 @@ const value = Array.isArray(field.value) ? field.value : [];
                             name={"agent_config.ingest_source_config.source_name" as any}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>CSV File Name *</FormLabel>
-                                <Input {...field} value={field.value || ''} placeholder="leads_sheet_june.csv" />
-                                <p className="text-xs text-slate-400">Name of the uploaded CSV file</p>
+                                <FormLabel>CSV File *</FormLabel>
+                                <div className="border-2 border-dashed rounded-lg p-4 text-center bg-white">
+                                  <input
+                                    type="file"
+                                    accept=".csv"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) field.onChange(file.name);
+                                    }}
+                                    className="hidden"
+                                    id="csv-ingest-upload"
+                                  />
+                                  <label htmlFor="csv-ingest-upload" className="cursor-pointer">
+                                    {field.value ? (
+                                      <div className="flex items-center justify-center gap-2 text-sm">
+                                        <FileText className="w-4 h-4" />
+                                        <span>{field.value}</span>
+                                      </div>
+                                    ) : (
+                                      <div className="flex flex-col items-center gap-2">
+                                        <Upload className="w-6 h-6 text-slate-400" />
+                                        <p className="text-sm text-slate-500">Click to upload CSV file</p>
+                                        <p className="text-xs text-slate-400">Only .csv files are supported</p>
+                                      </div>
+                                    )}
+                                  </label>
+                                </div>
+                                <p className="text-xs text-slate-400">Upload CSV file with phone numbers</p>
                               </FormItem>
                             )}
                           />

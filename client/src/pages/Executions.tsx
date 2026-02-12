@@ -52,6 +52,13 @@ export default function Executions() {
   });
   
   const { data: agents } = useAgents();
+
+  useEffect(() => {
+    if (agents && agents.length > 0 && !selectedAgentId) {
+      setSelectedAgentId(String(agents[0].id));
+    }
+  }, [agents, selectedAgentId]);
+
   const { data: execution, isLoading: isExecutionLoading } = useExecution(queryId, selectedAgentId);
   const { data: agentExecutions, isLoading: isListLoading, refetch: refetchAgentExecutions } = useAgentExecutions(
     selectedAgentId || null,
@@ -194,13 +201,18 @@ export default function Executions() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Agent Conversations</h1>
-            <p className="text-sm text-muted-foreground">View and manage all historical conversations with agents</p>
+            <p className="text-sm" style={{ 
+              background: 'linear-gradient(113deg, #2335c9 0%, #ef415f 50%, #ff9921 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}>View and manage all historical conversations with agents</p>
           </div>
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-muted-foreground">Available balance: <span className="text-foreground">$4.86</span></span>
             <Button variant="outline" size="sm" className="gap-2"><Plus className="w-4 h-4" /> Add more funds</Button>
             <Button variant="outline" size="sm" className="gap-2 text-slate-500">Help</Button>
-          </div>
+          </div> */}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

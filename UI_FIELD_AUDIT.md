@@ -1,14 +1,14 @@
-# UI Field Audit - Bolna v2 API Compliance ✅ COMPLETED
+# UI Field Audit - ThinkVoicev2 API Compliance ✅ COMPLETED
 
 ## Summary
-Reviewed and updated all UI fields in Agents.tsx to match the official Bolna v2 API documentation perfectly.
+Reviewed and updated all UI fields in Agents.tsx to match the official ThinkVoicev2 API documentation perfectly.
 
 ## Changes Made
 
 ### ✅ Fixed Issues
 
 1. **Removed duplicate "Configure Language" field** at top of Audio tab
-   - This field doesn't exist in Bolna v2 API structure
+   - This field doesn't exist in ThinkVoicev2 API structure
    - Language is configured per transcriber provider
 
 2. **Removed duplicate Text-to-Speech section**
@@ -25,9 +25,9 @@ Reviewed and updated all UI fields in Agents.tsx to match the official Bolna v2 
    - Added helper text for `endpointing`: "Milliseconds of silence before considering speech ended"
    - Simplified `stream` description to "Real-time transcription"
 
-5. **✅ REPLACED Call Configuration tab with official Bolna v2 API fields**:
+5. **✅ REPLACED Call Configuration tab with official ThinkVoicev2 API fields**:
    - Removed all custom fields (noise_cancellation, voicemail_detection, keypad_input, auto_reschedule, final_messages, etc.)
-   - Added official Bolna v2 API fields organized into sections:
+   - Added official ThinkVoicev2 API fields organized into sections:
      - **Telephony Providers**: input.provider, output.provider
      - **Conversation Settings**: hangup_after_silence, call_terminate, incremental_delay, number_of_words_for_interruption, hangup_after_LLMCall, call_cancellation_prompt
      - **Backchanneling**: backchanneling, backchanneling_message_gap, backchanneling_start_delay
@@ -92,4 +92,4 @@ Reviewed and updated all UI fields in Agents.tsx to match the official Bolna v2 
 - `d:\Bolna-Wrapper\UI_FIELD_AUDIT.md`
 
 ## Result
-✅ **All UI fields now perfectly match the official Bolna v2 API documentation**
+✅ **All UI fields now perfectly match the official ThinkVoicev2 API documentation**

@@ -3,17 +3,17 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter';
 
 export default function LoginPage() {
   const { login, loginSuperAdmin } = useAuth();
   const [location, setLocation] = useLocation();
   const [tenantSlug, setTenantSlug] = useState('');
 
-  // Prefill tenant slug when visiting /t/:slug paths
+  // Check if we are on the admin login page
+  const isAdminLogin = location === '/admin/login';
   useEffect(() => {
     const match = location.match(/^\/t\/([^\/]+)/);
     if (match) setTenantSlug(match[1]);
@@ -77,90 +77,95 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Bolna SaaS</CardTitle>
-          <CardDescription>Sign in to your account</CardDescription>
+          <CardTitle className="text-2xl font-bold">ThinkVoiceSaaS</CardTitle>
+          <CardDescription>
+            {isAdminLogin ? 'Super Admin Access' : 'Sign in to your account'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="tenant" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="tenant">Tenant Login</TabsTrigger>
-              <TabsTrigger value="admin">Super Admin</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="tenant" className="space-y-4">
-              <div className="space-y-4">
-                <div>
-                  <Input
-                    placeholder="Tenant Slug (optional)"
-                    value={tenantSlug}
-                    onChange={(e) => setTenantSlug(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Input
-                    type="email"
-                    placeholder="Email"
-                    value={tenantEmail}
-                    onChange={(e) => setTenantEmail(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Input
-                    type="password"
-                    placeholder="Password"
-                    value={tenantPassword}
-                    onChange={(e) => setTenantPassword(e.target.value)}
-                  />
-                </div>
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                <Button 
-                  className="w-full" 
-                  onClick={handleTenantLogin}
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Signing in...' : 'Sign In'}
-                </Button>
+          {isAdminLogin ? (
+            <div className="space-y-4">
+              <div>
+                <Input
+                  type="email"
+                  placeholder="Super Admin Email"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                />
               </div>
-            </TabsContent>
-            
-            <TabsContent value="admin" className="space-y-4">
-              <div className="space-y-4">
-                <div>
-                  <Input
-                    type="email"
-                    placeholder="Super Admin Email"
-                    value={adminEmail}
-                    onChange={(e) => setAdminEmail(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Input
-                    type="password"
-                    placeholder="Password"
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                  />
-                </div>
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                <Button 
-                  className="w-full" 
-                  onClick={handleAdminLogin}
-                  disabled={isLoading}
-                  variant="secondary"
-                >
-                  {isLoading ? 'Signing in...' : 'Super Admin Login'}
-                </Button>
+              <div>
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                />
               </div>
-            </TabsContent>
-          </Tabs>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <Button 
+                className="w-full" 
+                onClick={handleAdminLogin}
+                disabled={isLoading}
+                variant="secondary"
+              >
+                {isLoading ? 'Signing in...' : 'Super Admin Login'}
+              </Button>
+              
+              <div className="mt-4 text-center text-sm">
+                <Link href="/login" className="text-primary hover:underline">
+                  Not an admin? Tenant Login
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <Input
+                  placeholder="Tenant Slug (optional)"
+                  value={tenantSlug}
+                  onChange={(e) => setTenantSlug(e.target.value)}
+                />
+              </div>
+              <div>
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  value={tenantEmail}
+                  onChange={(e) => setTenantEmail(e.target.value)}
+                />
+              </div>
+              <div>
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={tenantPassword}
+                  onChange={(e) => setTenantPassword(e.target.value)}
+                />
+              </div>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <Button 
+                className="w-full" 
+                onClick={handleTenantLogin}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Signing in...' : 'Sign In'}
+              </Button>
+              
+              <div className="mt-4 text-center text-sm">
+                <Link href="/admin/login" className="text-primary hover:underline">
+                  Super Admin? Login here
+                </Link>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

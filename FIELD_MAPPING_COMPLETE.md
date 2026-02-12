@@ -1,4 +1,4 @@
-# Bolna API to Agents.tsx - Complete Field Mapping
+# ThinkVoiceAPI to Agents.tsx - Complete Field Mapping
 
 ## ✅ 100% MAPPED - All Fields Implemented
 
@@ -153,7 +153,7 @@
 
 ## ✅ Status: 100% COMPLETE
 
-Every field from the Bolna API response is now either:
+Every field from the ThinkVoiceAPI response is now either:
 - Editable in the UI
 - Displayed as read-only metadata
 - Hardcoded with appropriate defaults

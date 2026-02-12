@@ -49,12 +49,17 @@ export default function Knowledgebase() {
     e.preventDefault();
 
     // Validate input first
-    if (kbType === 'file' && !selectedFile) {
-      toast({ title: "Missing file", description: "Must provide either 'file' or 'url' parameter", variant: 'destructive' });
+    if (!formData.knowledgebase_name.trim()) {
+      toast({ title: "Missing name", description: "Please provide a name for the knowledge base", variant: 'destructive' });
       return;
     }
-    if (kbType === 'url' && !formData.url) {
-      toast({ title: "Missing URL", description: "Must provide either 'file' or 'url' parameter", variant: 'destructive' });
+
+    if (kbType === 'file' && !selectedFile) {
+      toast({ title: "Missing file", description: "Please select a file to upload", variant: 'destructive' });
+      return;
+    }
+    if (kbType === 'url' && !formData.url.trim()) {
+      toast({ title: "Missing URL", description: "Please provide a website URL", variant: 'destructive' });
       return;
     }
 
@@ -62,14 +67,20 @@ export default function Knowledgebase() {
     if (selectedFile) {
       const fd = new FormData();
       fd.append('file', selectedFile, selectedFile.name);
-      if (formData.knowledgebase_name) fd.append('knowledgebase_name', formData.knowledgebase_name);
+      fd.append('knowledgebase_name', formData.knowledgebase_name);
+      
+      console.log('[KB] Creating with file:', selectedFile.name, 'name:', formData.knowledgebase_name);
+      
       createKb(fd as any, {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          console.log('[KB] File upload success:', data);
           setIsOpen(false);
           setFormData({ knowledgebase_name: '', url: '' });
           setSelectedFile(null);
+          toast({ title: 'Knowledge Base Created', description: 'Your document is being processed.', variant: 'default' });
         },
         onError: (err: any) => {
+          console.error('[KB] File upload error:', err);
           toast({ title: 'Creation failed', description: err?.message || 'Failed to create knowledge base', variant: 'destructive' });
         }
       });
@@ -77,12 +88,17 @@ export default function Knowledgebase() {
     }
 
     // Fallback: send JSON (URL-based ingestion)
+    console.log('[KB] Creating with URL:', formData.url, 'name:', formData.knowledgebase_name);
+    
     createKb({ url: formData.url, knowledgebase_name: formData.knowledgebase_name }, {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        console.log('[KB] URL creation success:', data);
         setIsOpen(false);
         setFormData({ knowledgebase_name: '', url: '' });
+        toast({ title: 'Knowledge Base Created', description: 'Your website is being processed.', variant: 'default' });
       },
       onError: (err: any) => {
+        console.error('[KB] URL creation error:', err);
         toast({ title: 'Creation failed', description: err?.message || 'Failed to create knowledge base', variant: 'destructive' });
       }
     });

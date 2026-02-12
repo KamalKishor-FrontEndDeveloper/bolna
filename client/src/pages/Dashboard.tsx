@@ -1,7 +1,7 @@
 import { Layout } from "@/components/Layout";
 import { useApiKey } from "@/hooks/use-api-keys";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Bot, PhoneCall, Activity, AlertCircle, TrendingUp, Users, Clock, ArrowUpRight, Database } from "lucide-react";
+import { Bot, PhoneCall, Activity, AlertCircle, TrendingUp, Users, Clock, ArrowUpRight, Database, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
@@ -36,37 +36,61 @@ export default function Dashboard() {
       label: "Total Agents", 
       value: agentsLoading ? "..." : agentCount, 
       icon: Bot, 
-      color: "blue",
+      color: "purple",
       subtext: "Voice agents configured"
     },
     { 
       label: "Phone Numbers", 
       value: phoneCount, 
       icon: PhoneCall, 
-      color: "green",
+      color: "blue",
       subtext: "Numbers available"
     },
     { 
       label: "Knowledge Bases", 
       value: kbCount, 
       icon: Database, 
-      color: "purple",
+      color: "slate",
       subtext: "Data sources"
     },
     { 
       label: "Active Calls", 
       value: 0, 
       icon: Activity, 
-      color: "orange",
+      color: "emerald",
       subtext: "In progress"
     },
   ];
 
   const quickActions = [
-    { label: "Create Agent", href: "/agents", icon: Bot, color: "blue" },
-    { label: "Make Call", href: "/calls", icon: PhoneCall, color: "green" },
-    { label: "View History", href: "/executions", icon: Activity, color: "purple" },
-    { label: "Voice Lab", href: "/voice-lab", icon: Users, color: "orange" },
+    { 
+      label: "Create Agent", 
+      href: "/agents", 
+      icon: Bot, 
+      className: "bg-[#F3E8FF] border-[#E9D5FF] hover:border-[#D8B4FE]",
+      iconClassName: "bg-white text-[#9333EA]"
+    },
+    { 
+      label: "Make Call", 
+      href: "/calls", 
+      icon: PhoneCall, 
+      className: "bg-[#E0F2FE] border-[#BAE6FD] hover:border-[#7DD3FC]",
+      iconClassName: "bg-white text-[#0284C7]"
+    },
+    { 
+      label: "View History", 
+      href: "/executions", 
+      icon: Clock, 
+      className: "bg-[#FEF3C7] border-[#FDE68A] hover:border-[#FCD34D]",
+      iconClassName: "bg-white text-[#D97706]"
+    },
+    { 
+      label: "Manage Batches", 
+      href: "/batches", 
+      icon: Layers, 
+      className: "bg-[#FCE7F3] border-[#FBCFE8] hover:border-[#F9A8D4]",
+      iconClassName: "bg-white text-[#DB2777]"
+    },
   ];
 
   if (!hasKey) {
@@ -78,7 +102,7 @@ export default function Dashboard() {
           </div>
           <h2 className="text-2xl font-bold mb-2">API Key Required</h2>
           <p className="text-muted-foreground max-w-md text-center mb-8">
-            Configure your Bolna API key to start managing agents and making calls.
+            Configure your ThinkVoiceAPI key to start managing agents and making calls.
           </p>
           <Link href="/settings">
             <Button size="lg">Go to Settings</Button>
@@ -104,17 +128,17 @@ export default function Dashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
             >
-              <Card className="relative overflow-hidden hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                      <p className="text-3xl font-bold">{stat.value}</p>
-                      <p className="text-xs text-muted-foreground">{stat.subtext}</p>
+              <Card className="relative overflow-hidden">
+                <CardContent className="p-7">
+                  <div className="flex justify-between items-start mb-6">
+                    <p className="text-[15px] font-medium text-slate-600 pt-1">{stat.label}</p>
+                    <div className="p-3 bg-slate-100 rounded-[14px]">
+                      <stat.icon className="w-5 h-5 text-slate-700" />
                     </div>
-                    <div className={`p-3 rounded-xl bg-${stat.color}-50`}>
-                      <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
-                    </div>
+                  </div>
+                  <div>
+                    <p className="text-4xl font-bold text-slate-900 tracking-tight">{stat.value}</p>
+                    <p className="text-sm text-slate-500 mt-2 font-medium">{stat.subtext}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -133,16 +157,16 @@ export default function Dashboard() {
                 transition={{ delay: 0.4 + i * 0.05 }}
               >
                 <Link href={action.href}>
-                  <Card className="group cursor-pointer hover:shadow-lg transition-all hover:border-primary">
+                  <Card className={`group cursor-pointer hover:shadow-lg transition-all border ${action.className}`}>
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg bg-${action.color}-50 group-hover:bg-${action.color}-100 transition-colors`}>
-                            <action.icon className={`w-5 h-5 text-${action.color}-600`} />
+                        <div className="flex items-center gap-4">
+                          <div className={`p-2.5 rounded-xl transition-colors ${action.iconClassName}`}>
+                            <action.icon className="w-5 h-5" />
                           </div>
-                          <span className="font-medium">{action.label}</span>
+                          <span className="font-medium text-slate-900">{action.label}</span>
                         </div>
-                        <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
                       </div>
                     </CardContent>
                   </Card>

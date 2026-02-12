@@ -1,9 +1,9 @@
 # Multi-Account Management Guide
 
 ## Problem
-When switching between different Bolna accounts (with different API keys), the local database still contains old agent records from the previous account. This causes:
+When switching between different ThinkVoiceaccounts (with different API keys), the local database still contains old agent records from the previous account. This causes:
 - Settings page showing wrong agent count (from local database)
-- Dashboard showing correct agent count (from Bolna API)
+- Dashboard showing correct agent count (from ThinkVoiceAPI)
 - Confusion for stakeholders
 
 ## Solution
@@ -13,10 +13,10 @@ We've implemented a **Database Sync** feature that automatically cleans up orpha
 
 ### Automatic Sync
 The system compares:
-1. **Bolna API** - Source of truth (actual agents in your Bolna account)
+1. **ThinkVoiceAPI** - Source of truth (actual agents in your ThinkVoiceaccount)
 2. **Local Database** - Cached records (may contain old data)
 
-Any agents in the local database that don't exist in Bolna API are automatically deleted.
+Any agents in the local database that don't exist in ThinkVoiceAPI are automatically deleted.
 
 ### Manual Sync
 You can manually trigger a sync from the **Settings** page:
@@ -27,7 +27,7 @@ You can manually trigger a sync from the **Settings** page:
 
 ## When to Use Sync
 
-### Scenario 1: Switching Bolna Accounts
+### Scenario 1: Switching ThinkVoiceAccounts
 ```
 Before: Local DB has 3 agents from Account 1
 Switch to Account 2 (has 1 agent)
@@ -37,14 +37,14 @@ After Sync: Local DB now has 1 agent (matches Account 2)
 ### Scenario 2: Deleted Agents in Bolna
 ```
 Before: Local DB has 5 agents
-Delete 2 agents directly in Bolna dashboard
+Delete 2 agents directly in ThinkVoicedashboard
 After Sync: Local DB now has 3 agents (matches Bolna)
 ```
 
 ### Scenario 3: Fresh Start
 ```
 Before: Local DB has old test data
-After Sync: Local DB matches current Bolna account exactly
+After Sync: Local DB matches current ThinkVoiceaccount exactly
 ```
 
 ## Best Practices
@@ -75,14 +75,14 @@ Authorization: Bearer <token>
 ## Troubleshooting
 
 ### "Sync failed" Error
-- Check your Bolna API key is valid
+- Check your ThinkVoiceAPI key is valid
 - Ensure you have internet connection
 - Try logging out and back in
 
 ### Count Still Wrong After Sync
 - Hard refresh the page (Ctrl+Shift+R)
 - Check if you're looking at the right tenant
-- Verify API key matches the Bolna account you expect
+- Verify API key matches the ThinkVoiceaccount you expect
 
 ## Future Improvements
 - Auto-sync on login

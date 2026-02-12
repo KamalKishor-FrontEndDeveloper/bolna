@@ -1,4 +1,4 @@
-# Multi-Tenant Bolna SaaS Platform
+# Multi-Tenant ThinkVoiceSaaS Platform
 
 ## 🎯 Overview
 
@@ -7,7 +7,7 @@ This is now a complete multi-tenant SaaS platform that replicates Bolna.ai funct
 - **Super Admin** - Manages all tenants
 - **Tenants** - Individual companies with isolated workspaces  
 - **Users** - Role-based access (admin, manager, agent) within tenants
-- **Complete Bolna Feature Set** - Agents, calls, campaigns, phone numbers, analytics
+- **Complete ThinkVoiceFeature Set** - Agents, calls, campaigns, phone numbers, analytics
 
 ## 🏗️ Architecture
 
@@ -137,7 +137,7 @@ GET  /api/tenant/agents
 POST /api/tenant/agents
 ```
 
-### Bolna Proxy (Tenant-Scoped)
+### ThinkVoiceProxy (Tenant-Scoped)
 ```
 GET  /api/bolna/agents
 POST /api/bolna/agents
@@ -171,7 +171,7 @@ client/src/
 - Tenant data isolation
 - Role-based access control
 - API key management per tenant
-- Secure Bolna API proxying
+- Secure ThinkVoiceAPI proxying
 
 ## 📈 Scaling Considerations
 
@@ -233,7 +233,7 @@ This multi-tenant transformation provides:
 - Complete tenant isolation
 - Scalable architecture
 - Role-based security
-- Bolna API compatibility
+- ThinkVoiceAPI compatibility
 - Modern React UI
 
 You now have a production-ready SaaS platform foundation!

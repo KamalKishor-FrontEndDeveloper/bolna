@@ -3,7 +3,7 @@ import { superAdmins } from '@shared/schema';
 import { hashPassword } from './server/auth';
 
 async function setupMultiTenant() {
-  console.log('🚀 Setting up multi-tenant Bolna SaaS...');
+  console.log('🚀 Setting up multi-tenant ThinkVoiceSaaS...');
 
   try {
     // Create first super admin from env vars to avoid static credentials

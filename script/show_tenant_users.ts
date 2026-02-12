@@ -13,7 +13,7 @@ async function showTenantUsers() {
     console.log(`   ID: ${tenant.id}`);
     console.log(`   Plan: ${tenant.plan}`);
     console.log(`   Status: ${tenant.status}`);
-    console.log(`   Bolna Sub-Account: ${tenant.bolna_sub_account_id}`);
+    console.log(`   ThinkVoiceSub-Account: ${tenant.bolna_sub_account_id}`);
     console.log(`   Created: ${tenant.created_at}`);
     
     const tenantUsers = await db.select().from(users).where(eq(users.tenant_id, tenant.id));

@@ -5,7 +5,7 @@ import { bolnaService } from "./bolna";
 
 export async function syncAgentsWithBolna(tenantId: number, subAccountId: string) {
   try {
-    // Fetch agents from Bolna API
+    // Fetch agents from ThinkVoiceAPI
     const bolnaAgents = await bolnaService.listAgents(subAccountId);
     const bolnaAgentIds = new Set(bolnaAgents.map((a: any) => a.agent_id || a.id));
 
@@ -22,7 +22,7 @@ export async function syncAgentsWithBolna(tenantId: number, subAccountId: string
       }
     }
 
-    // Fetch phone numbers from Bolna API
+    // Fetch phone numbers from ThinkVoiceAPI
     const bolnaPhones = await bolnaService.listPhoneNumbers(subAccountId);
     const bolnaPhoneIds = new Set(bolnaPhones.map((p: any) => p.phone_number_id || p.id));
 
@@ -71,7 +71,7 @@ export async function syncExecutionsWithBolna(tenantId: number, subAccountId: st
     
     let syncedCount = 0;
     
-    // For each agent, fetch executions from Bolna and sync to DB
+    // For each agent, fetch executions from ThinkVoiceand sync to DB
     for (const agent of localAgents) {
       try {
         const executionsData = await bolnaService.fetchExecutions(

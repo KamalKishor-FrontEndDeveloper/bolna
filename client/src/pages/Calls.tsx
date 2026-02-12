@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/PageHeader";
 import { useAgents, useMakeCall } from "@/hooks/use-bolna";
@@ -23,6 +23,12 @@ export default function Calls() {
 
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (agents && agents.length > 0 && !formData.agent_id) {
+      setFormData(prev => ({ ...prev, agent_id: String(agents[0].id) }));
+    }
+  }, [agents, formData.agent_id]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -31,7 +37,8 @@ export default function Calls() {
         agent_id: formData.agent_id,
         recipient_phone_number: formData.recipient_phone_number,
         from_phone_number: formData.from_phone_number,
-        user_data: userData
+        user_data: userData,
+        bypass_call_guardrails: false
       }, {
         onSuccess: () => {
           toast({ title: 'Call initiated', description: 'Your call has been started successfully' });
@@ -143,7 +150,7 @@ export default function Calls() {
             </CardHeader>
             <CardContent className="text-sm text-blue-900/80 space-y-4">
               <p>
-                Ensure your "From" number is verified in the Bolna dashboard to avoid call rejection.
+                Ensure your "From" number is verified in the ThinkVoicedashboard to avoid call rejection.
               </p>
               <p>
                 User Data is injected into the prompt variables. If your prompt has {"{{name}}"}, include {"{ \"name\": \"John\" }"} in the JSON.

@@ -37,7 +37,7 @@ export default function Settings() {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        toast({ title: "Sync completed", description: "Database synced with Bolna API" });
+        toast({ title: "Sync completed", description: "Database synced with ThinkVoiceAPI" });
         fetchBilling(); // Refresh billing data
       } else {
         const err = await res.json();
@@ -102,10 +102,10 @@ export default function Settings() {
 
   return (
     <Layout>
-      <PageHeader title="Settings" description="Configure your Bolna API integration" />
+      <PageHeader title="Settings" description="Configure your ThinkVoiceAPI integration" />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <Card className="border-l-4 border-l-primary">
+        <Card className="border-l-4" style={{ borderLeftColor: '#ef415f' }}>
           <CardHeader>
             <div className="flex items-center gap-2 mb-2">
               <div className="p-2 bg-slate-100 rounded-lg">
@@ -114,7 +114,7 @@ export default function Settings() {
               <CardTitle>API Configuration</CardTitle>
             </div>
             <CardDescription>
-              Enter your Bolna API Key to enable dashboard features. 
+              Enter your ThinkVoiceAPI Key to enable dashboard features. 
               The key is stored securely in your database.
             </CardDescription>
           </CardHeader>
@@ -122,7 +122,7 @@ export default function Settings() {
             {isSuperAdmin ? (
               <>
                 <div className="space-y-2">
-                  <Label>Bolna API Key</Label>
+                  <Label>ThinkVoiceAPI Key</Label>
                   <div className="flex gap-4">
                     <Input 
                       type="password" 
@@ -177,13 +177,13 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-       <Card className="border-l-4 border-l-primary">
+       <Card className="border-l-4 border-[#5B2E91]">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="p-2 bg-slate-100 rounded-lg">
-                      <Save className="w-5 h-5 text-slate-700" />
+                    <div className="p-2 bg-purple-50 rounded-lg">
+                      <Save className="w-5 h-5 text-[#5B2E91]" />
                     </div>
                     <CardTitle>Billing & Plan</CardTitle>
                   </div>
@@ -191,7 +191,7 @@ export default function Settings() {
                     View your current subscription plan and usage. Upgrade if you need more capacity.
                   </CardDescription>
                 </div>
-                <Button onClick={handleSync} disabled={syncing} variant="outline" size="sm">
+                <Button onClick={handleSync} disabled={syncing} variant="outline" size="sm" className="border-slate-200">
                   {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                 </Button>
               </div>

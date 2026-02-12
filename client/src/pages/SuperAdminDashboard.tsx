@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -9,9 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Building2, Users, Activity, Save, Loader2, CheckCircle2, Lock } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Label } from '@/components/ui/label';
 import { useApiKey } from '@/hooks/use-api-keys';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 interface Tenant {
   id: number;
@@ -37,12 +37,10 @@ interface TenantUsage {
 
 export default function SuperAdminDashboard() {
   const { token, logout } = useAuth();
+  const [, setLocation] = useLocation();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showManageDialog, setShowManageDialog] = useState(false);
-  const [selectedTenant, setSelectedTenant] = useState<TenantUsage | null>(null);
-  const [managementLoading, setManagementLoading] = useState(false);
   const [newTenant, setNewTenant] = useState({
     name: '',
     slug: '',
@@ -53,7 +51,7 @@ export default function SuperAdminDashboard() {
     sub_account_id: ''
   });
 
-  // Bolna API Key management (super-admin)
+  // ThinkVoiceAPI Key management (super-admin)
   const { hasKey, saveKey, isLoading: isKeyLoading } = useApiKey();
   const [key, setKey] = useState('');
   const handleKeySave = () => {
@@ -112,7 +110,7 @@ export default function SuperAdminDashboard() {
         if (data?.tenant?.settings?.pending_subaccount) {
           toast({
             title: 'Tenant created (sub-account pending)',
-            description: 'Bolna sub-account creation is restricted on your Bolna account. You provided a placeholder or one was generated. Attach a real sub-account ID later via Manage → Attach Sub-Account.'
+            description: 'ThinkVoicesub-account creation is restricted on your ThinkVoiceaccount. You provided a placeholder or one was generated. Attach a real sub-account ID later via Manage → Attach Sub-Account.'
           });
         } else {
           toast({ title: 'Tenant created', description: 'Tenant successfully created.' });
@@ -127,45 +125,6 @@ export default function SuperAdminDashboard() {
   };
 
   const [attachSubValue, setAttachSubValue] = useState('');
-
-  const manageTenant = async (tenantId: number) => {
-    setManagementLoading(true);
-    try {
-      const response = await fetch(`/api/super-admin/tenants/${tenantId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSelectedTenant(data);
-        setAttachSubValue(data.tenant.bolna_sub_account_id || '');
-        setShowManageDialog(true);
-      }
-    } catch (error) {
-      console.error('Failed to fetch tenant details:', error);
-    } finally {
-      setManagementLoading(false);
-    }
-  };
-
-  const attachSubAccount = async (tenantId: number, subAccountId: string) => {
-    try {
-      const response = await fetch(`/api/super-admin/tenants/${tenantId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ sub_account_id: subAccountId })
-      });
-      const data = await response.json().catch(() => ({}));
-      if (response.ok) {
-        toast({ title: 'Sub-account attached', description: 'Sub-account attached to tenant.' });
-        fetchTenants();
-        manageTenant(tenantId);
-      } else {
-        toast({ title: 'Failed', description: data?.message || 'Failed to attach sub-account', variant: 'destructive' });
-      }
-    } catch (err: any) {
-      toast({ title: 'Failed', description: err?.message || 'Failed to attach sub-account', variant: 'destructive' });
-    }
-  };
 
   const impersonate = async (tenantId: number) => {
     try {
@@ -195,48 +154,8 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const updateTenantPlan = async (tenantId: number, plan: string) => {
-    try {
-      const response = await fetch(`/api/super-admin/tenants/${tenantId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ plan })
-      });
-
-      if (response.ok) {
-        fetchTenants();
-        manageTenant(tenantId); // Refresh tenant details
-      }
-    } catch (error) {
-      console.error('Failed to update tenant:', error);
-    }
-  };
-
-  const updateTenantStatus = async (tenantId: number, status: string) => {
-    try {
-      const response = await fetch(`/api/super-admin/tenants/${tenantId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ status })
-      });
-
-      if (response.ok) {
-        fetchTenants();
-        manageTenant(tenantId); // Refresh tenant details
-      }
-    } catch (error) {
-      console.error('Failed to update tenant:', error);
-    }
-  };
-
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return <LoadingSpinner message="Loading dashboard..." />;
   }
 
   return (
@@ -295,9 +214,9 @@ export default function SuperAdminDashboard() {
           <CardHeader>
             <div className="flex items-center gap-2 mb-2">
               <div className="p-2 bg-slate-100 rounded-lg"><Lock className="w-5 h-5 text-slate-700" /></div>
-              <CardTitle>Bolna API Key</CardTitle>
+              <CardTitle>ThinkVoiceAPI Key</CardTitle>
             </div>
-            <CardDescription>Manage the global Bolna API Key used to proxy Bolna requests for tenants.</CardDescription>
+            <CardDescription>Manage the global ThinkVoiceAPI Key used to proxy ThinkVoicerequests for tenants.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
@@ -385,11 +304,11 @@ export default function SuperAdminDashboard() {
                     />
 
                     <Input
-                      placeholder="Bolna Sub-Account ID (optional)"
+                      placeholder="ThinkVoiceSub-Account ID (optional)"
                       value={(newTenant as any).sub_account_id || ''}
                       onChange={(e) => setNewTenant({...newTenant, sub_account_id: e.target.value})}
                     />
-                    <p className="text-xs text-slate-500">If your Bolna account cannot create sub-accounts programmatically, paste an existing sub-account ID here.</p>
+                    <p className="text-xs text-slate-500">If your ThinkVoiceaccount cannot create sub-accounts programmatically, paste an existing sub-account ID here.</p>
 
                     <Select value={newTenant.plan} onValueChange={(value) => setNewTenant({...newTenant, plan: value})}>
                       <SelectTrigger>
@@ -439,7 +358,7 @@ export default function SuperAdminDashboard() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => manageTenant(tenant.id)}
+                        onClick={() => setLocation(`/super-admin/tenants/${tenant.id}`)}
                       >
                         Manage
                       </Button>
@@ -450,7 +369,6 @@ export default function SuperAdminDashboard() {
                       }}>
                         Impersonate
                       </Button>
-                      {/* Open Dashboard now performs impersonation; removed to avoid duplication. */}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -458,133 +376,6 @@ export default function SuperAdminDashboard() {
             </Table>
           </CardContent>
         </Card>
-
-        {/* Tenant Management Dialog */}
-        <Dialog open={showManageDialog} onOpenChange={setShowManageDialog}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Manage Tenant: {selectedTenant?.tenant.name}</DialogTitle>
-              <DialogDescription>
-                View usage statistics and manage tenant settings
-              </DialogDescription>
-            </DialogHeader>
-            
-            {selectedTenant && (
-              <div className="space-y-6">
-                {/* Tenant Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Company</label>
-                    <p className="text-lg">{selectedTenant.tenant.name}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Slug</label>
-                    <p className="text-lg">{selectedTenant.tenant.slug}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <Button onClick={() => {
-                    const ok = window.confirm(`Impersonate tenant ${selectedTenant.tenant.name}? You will act as a tenant admin until you stop impersonation.`);
-                    if (!ok) return;
-                    impersonate(selectedTenant.tenant.id);
-                  }}>
-                    Impersonate
-                  </Button>
-                </div>
-
-                {/* Plan Management */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Plan</label>
-                  <Select 
-                    value={selectedTenant.tenant.plan} 
-                    onValueChange={(value) => updateTenantPlan(selectedTenant.tenant.id, value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="starter">Starter</SelectItem>
-                      <SelectItem value="pro">Pro</SelectItem>
-                      <SelectItem value="enterprise">Enterprise</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Status Management */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Status</label>
-                  <Select 
-                    value={selectedTenant.tenant.status} 
-                    onValueChange={(value) => updateTenantStatus(selectedTenant.tenant.id, value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="suspended">Suspended</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Attach / Manage Bolna Sub-Account */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Bolna Sub-Account</label>
-                  <div className="flex gap-3">
-                    <Input value={attachSubValue} onChange={(e) => setAttachSubValue(e.target.value)} placeholder="Sub-Account ID" />
-                    <Button onClick={() => attachSubAccount(selectedTenant.tenant.id, attachSubValue)}>Attach</Button>
-                  </div>
-
-                  {selectedTenant.tenant.settings?.pending_subaccount && (
-                    <div className="mt-2 text-sm text-yellow-700">This tenant has a pending sub-account. Attach a real sub-account ID when available.</div>
-                  )}
-                </div>
-
-                {/* Usage Statistics */}
-                <div>
-                  <h3 className="text-sm font-medium mb-3">Usage Statistics</h3>
-                  <div className="space-y-3">
-                    {Object.entries(selectedTenant.usage).map(([key, value]) => {
-                      const percentage = value.limit === -1 ? 0 : (value.current / value.limit) * 100;
-                      const isNearLimit = percentage > 80 && value.limit !== -1;
-                      const isAtLimit = value.current >= value.limit && value.limit !== -1;
-                      
-                      return (
-                        <div key={key} className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                            <span className={isAtLimit ? 'text-red-600 font-semibold' : isNearLimit ? 'text-yellow-600' : ''}>
-                              {value.current} / {value.limit === -1 ? '∞' : value.limit}
-                            </span>
-                          </div>
-                          {value.limit !== -1 && (
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className={`h-2 rounded-full ${isAtLimit ? 'bg-red-600' : isNearLimit ? 'bg-yellow-500' : 'bg-blue-600'}`}
-                                style={{ width: `${Math.min(percentage, 100)}%` }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Alerts */}
-                {Object.entries(selectedTenant.usage).some(([_, v]) => v.current >= v.limit && v.limit !== -1) && (
-                  <Alert variant="destructive">
-                    <AlertDescription>
-                      This tenant has reached one or more plan limits. Consider upgrading their plan.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );

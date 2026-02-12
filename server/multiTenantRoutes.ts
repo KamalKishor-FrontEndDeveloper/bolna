@@ -13,7 +13,7 @@ import { bolnaService } from "./lib/bolna";
 import { canCreateResource, getPlanLimits, hasFeature } from "./lib/tenantLimits";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
-import { syncAgentsWithBolna, syncExecutionsWithBolna } from "./lib/syncService";
+import { syncAgentsWithBolna, syncExecutionsWithThinkVoice} from "./lib/syncService";
 
 export function registerMultiTenantRoutes(app: Express) {
   console.log('🔧 [ROUTES] Registering Multi-Tenant routes...');
@@ -104,31 +104,31 @@ export function registerMultiTenantRoutes(app: Express) {
       // Ensure the provided sub-account id isn't already linked to another tenant
       const [existingBySub] = await db.select().from(tenants).where(eq(tenants.bolna_sub_account_id, String(subAccountId)));
       if (existingBySub) {
-        console.log('[TENANT CREATION] Provided Bolna sub-account already associated with tenant:', existingBySub.id);
-        return res.status(409).json({ message: 'Bolna sub-account already linked to another tenant' });
+        console.log('[TENANT CREATION] Provided ThinkVoicesub-account already associated with tenant:', existingBySub.id);
+        return res.status(409).json({ message: 'ThinkVoicesub-account already linked to another tenant' });
       }
     } else {
-      console.log('[TENANT CREATION] Creating Bolna sub-account...');
-      // Create Bolna sub-account
+      console.log('[TENANT CREATION] Creating ThinkVoicesub-account...');
+      // Create ThinkVoicesub-account
       try {
         const bolnaSubAccount = await bolnaService.createSubAccount(name, admin_email);
-        console.log('[TENANT CREATION] Bolna sub-account response:', bolnaSubAccount);
+        console.log('[TENANT CREATION] ThinkVoicesub-account response:', bolnaSubAccount);
         subAccountId = bolnaSubAccount?.sub_account_id || bolnaSubAccount?.id;
         if (!subAccountId) {
-          console.log('[TENANT CREATION] Failed to get sub-account ID from Bolna response');
-          return res.status(500).json({ message: 'Failed to create Bolna sub-account' });
+          console.log('[TENANT CREATION] Failed to get sub-account ID from ThinkVoiceresponse');
+          return res.status(500).json({ message: 'Failed to create ThinkVoicesub-account' });
         }
 
-        // Ensure the returned Bolna sub-account isn't already linked to another tenant
+        // Ensure the returned ThinkVoicesub-account isn't already linked to another tenant
         const [existingBySub2] = await db.select().from(tenants).where(eq(tenants.bolna_sub_account_id, String(subAccountId)));
         if (existingBySub2) {
-          console.log('[TENANT CREATION] Bolna sub-account already associated with tenant:', existingBySub2.id);
-          return res.status(409).json({ message: 'Bolna sub-account already linked to another tenant' });
+          console.log('[TENANT CREATION] ThinkVoicesub-account already associated with tenant:', existingBySub2.id);
+          return res.status(409).json({ message: 'ThinkVoicesub-account already linked to another tenant' });
         }
       } catch (err: any) {
-        // If Bolna indicates sub-account creation is an enterprise-only feature, fallback to internal placeholder
+        // If ThinkVoiceindicates sub-account creation is an enterprise-only feature, fallback to internal placeholder
         const errMsg = err?.message || '';
-        console.warn('[TENANT CREATION] Bolna createSubAccount failed:', errMsg);
+        console.warn('[TENANT CREATION] ThinkVoicecreateSubAccount failed:', errMsg);
         const isEnterpriseRestriction = typeof errMsg === 'string' && (errMsg.toLowerCase().includes('not available') || errMsg.toLowerCase().includes('contact support') || err.status === 403);
         if (isEnterpriseRestriction) {
           // Generate internal placeholder id and mark tenant as pending sub-account
@@ -245,6 +245,42 @@ export function registerMultiTenantRoutes(app: Express) {
     });
   });
 
+  // Get tenant users
+  app.get('/api/super-admin/tenants/:id/users', requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    const tenantId = parseInt(req.params.id);
+    
+    const userList = await db.select().from(users)
+      .where(eq(users.tenant_id, tenantId))
+      .orderBy(desc(users.created_at));
+    
+    res.json(userList.map(u => ({ ...u, password_hash: undefined })));
+  });
+
+  // Update tenant user
+  app.patch('/api/super-admin/users/:userId', requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    const userId = parseInt(req.params.userId);
+    const { name, email, role, status } = req.body;
+
+    const updates: any = {};
+    if (name) updates.name = name;
+    if (email) updates.email = email;
+    if (role) updates.role = role;
+    if (status) updates.status = status;
+
+    try {
+      const [updatedUser] = await db.update(users)
+        .set(updates)
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (!updatedUser) return res.status(404).json({ message: 'User not found' });
+
+      res.json({ ...updatedUser, password_hash: undefined });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
   // --- Super-admin: Impersonation ---
   app.post('/api/super-admin/tenants/:id/impersonate', requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
@@ -295,7 +331,7 @@ export function registerMultiTenantRoutes(app: Express) {
         // Ensure the provided sub-account id isn't already linked to another tenant
         const [existing] = await db.select().from(tenants).where(eq(tenants.bolna_sub_account_id, String(sub_account_id)));
         if (existing && existing.id !== tenantId) {
-          return res.status(409).json({ message: 'Bolna sub-account already linked to another tenant' });
+          return res.status(409).json({ message: 'ThinkVoicesub-account already linked to another tenant' });
         }
 
         // Remove pending flag from settings if present
@@ -329,7 +365,7 @@ export function registerMultiTenantRoutes(app: Express) {
     const planLimits = getPlanLimits(req.tenant.plan);
     
     try {
-      // Get current usage from Bolna API (source of truth)
+      // Get current usage from ThinkVoiceAPI (source of truth)
       const bolnaAgents = await bolnaService.listAgents(req.tenant.bolna_sub_account_id);
       const bolnaPhones = await bolnaService.listPhoneNumbers(req.tenant.bolna_sub_account_id);
       
@@ -348,7 +384,7 @@ export function registerMultiTenantRoutes(app: Express) {
         }
       });
     } catch (err: any) {
-      // Fallback to database counts if Bolna API fails
+      // Fallback to database counts if ThinkVoiceAPI fails
       const [userCount] = await db.select({ count: count() }).from(users).where(eq(users.tenant_id, req.tenant.id));
       const [agentCount] = await db.select({ count: count() }).from(agents).where(eq(agents.tenant_id, req.tenant.id));
       const [phoneCount] = await db.select({ count: count() }).from(phoneNumbers).where(eq(phoneNumbers.tenant_id, req.tenant.id));
@@ -367,7 +403,7 @@ export function registerMultiTenantRoutes(app: Express) {
     }
   });
 
-  // --- API Keys (BOLNA API KEY) ---
+  // --- API Keys (ThinkVoiceAPI KEY) ---
   // Public: check whether a key exists (returns { value: boolean })
   app.get(api.keys.get.path, async (req: Request, res: Response) => {
     try {
@@ -474,13 +510,39 @@ export function registerMultiTenantRoutes(app: Express) {
     });
   });
 
-  // Get current user info
+  // Get current user info with wallet and concurrency data
   app.get('/api/auth/me', requireTenantUser, async (req: AuthRequest, res: Response) => {
-    const safeUser = { ...req.user, password_hash: undefined };
-    res.json({ user: safeUser, tenant: req.tenant });
+    try {
+      const safeUser = { ...req.user, password_hash: undefined };
+      
+      // Fetch wallet, concurrency, and pricing info from ThinkVoiceAPI
+      const client = await bolnaService['initClient']();
+      const headers = { "X-Sub-Account-Id": req.tenant.bolna_sub_account_id };
+      
+      try {
+        const meRes = await client.get('/user/me', { headers });
+        const bolnaData = meRes.data || {};
+        
+        res.json({ 
+          user: safeUser, 
+          tenant: req.tenant,
+          wallet: bolnaData.wallet || 0,
+          concurrency: bolnaData.concurrency || { max: 0, current: 0 },
+          pricing: bolnaData.pricing || null,
+          credit_limit: bolnaData.credit_limit || null,
+          bypass_compliance: bolnaData.bypass_compliance || false,
+          tier_plan: bolnaData.tier_plan || null
+        });
+      } catch (err) {
+        // If /user/me endpoint fails, return without ThinkVoicedata
+        res.json({ user: safeUser, tenant: req.tenant });
+      }
+    } catch (err: any) {
+      res.status(500).json({ message: err?.message || 'Failed to fetch user info' });
+    }
   });
 
-  // Sync local database with Bolna API (removes orphaned records)
+  // Sync local database with ThinkVoiceAPI (removes orphaned records)
   app.post('/api/tenant/sync', requireTenantUser, async (req: AuthRequest, res: Response) => {
     try {
       const result = await syncAgentsWithBolna(req.tenant.id, req.tenant.bolna_sub_account_id);
@@ -490,7 +552,7 @@ export function registerMultiTenantRoutes(app: Express) {
     }
   });
 
-  // Sync executions from Bolna API to local database
+  // Sync executions from ThinkVoiceAPI to local database
   app.post('/api/tenant/sync-executions', requireTenantUser, async (req: AuthRequest, res: Response) => {
     try {
       const result = await syncExecutionsWithBolna(req.tenant.id, req.tenant.bolna_sub_account_id);
@@ -534,7 +596,7 @@ export function registerMultiTenantRoutes(app: Express) {
       await bolnaService.stopAgent(agentId, subAccountId);
       res.json({ ok: true });
     } catch (err: any) {
-      console.error('[BOLNA STOP AGENT]', err);
+      console.error('[ThinkVoiceSTOP AGENT]', err);
       res.status(err?.status || 400).json({ message: err?.message || 'Failed to stop queued calls' });
     }
   });
@@ -577,7 +639,7 @@ export function registerMultiTenantRoutes(app: Express) {
       res.setHeader('Content-Disposition', `attachment; filename="agent-${agentId}-executions.csv"`);
       res.send(csv);
     } catch (err: any) {
-      console.error('[BOLNA EXPORT AGENT]', err);
+      console.error('[ThinkVoiceEXPORT AGENT]', err);
       res.status(err?.status || 400).json({ message: err?.message || 'Failed to export executions' });
     }
   });
@@ -685,7 +747,7 @@ export function registerMultiTenantRoutes(app: Express) {
 
   // === PHONE NUMBERS ===
 
-  // === BOLNA AGENT ROUTES ===
+  // === ThinkVoiceAGENT ROUTES ===
   // List agents (fetch from Bolna's /v2/agent/all) - tenant scoped
   app.get(api.bolna.agents.list.path, requireTenantUser, async (req: AuthRequest, res: Response) => {
     try {
@@ -755,7 +817,7 @@ export function registerMultiTenantRoutes(app: Express) {
     }
   });
 
-  // Make a call via Bolna (tenant-scoped)
+  // Make a call via ThinkVoice(tenant-scoped)
   app.post(api.bolna.calls.make.path, requireTenantUser, async (req: AuthRequest, res: Response) => {
     try {
       const payload = req.body;
@@ -769,7 +831,7 @@ export function registerMultiTenantRoutes(app: Express) {
     }
   });
 
-  // Get agent executions from Bolna API
+  // Get agent executions from ThinkVoiceAPI
   app.get(api.bolna.agents.executions.path, requireTenantUser, async (req: AuthRequest, res: Response) => {
     try {
       const agentId = req.params.id;
@@ -796,7 +858,7 @@ export function registerMultiTenantRoutes(app: Express) {
     }
   });
 
-  // Get batch executions from Bolna API
+  // Get batch executions from ThinkVoiceAPI
   app.get('/api/bolna/batches/:id/executions', requireTenantUser, async (req: AuthRequest, res: Response) => {
     try {
       const batchId = req.params.id;
@@ -933,7 +995,7 @@ export function registerMultiTenantRoutes(app: Express) {
     }
   });
 
-  // Get execution logs from Bolna API
+  // Get execution logs from ThinkVoiceAPI
   app.get('/api/bolna/executions/:id/log', requireTenantUser, async (req: AuthRequest, res: Response) => {
     try {
       const executionId = req.params.id;
@@ -947,7 +1009,7 @@ export function registerMultiTenantRoutes(app: Express) {
     }
   });
 
-  // Get single execution from Bolna API
+  // Get single execution from ThinkVoiceAPI
   app.get(api.bolna.executions.get.path, requireTenantUser, async (req: AuthRequest, res: Response) => {
     try {
       const executionId = req.params.id;
@@ -966,11 +1028,11 @@ export function registerMultiTenantRoutes(app: Express) {
     }
   });
 
-  // List all executions from Bolna API - NOT SUPPORTED by Bolna API
-  // Bolna only supports /v2/agent/{agent_id}/executions, not a global executions endpoint
+  // List all executions from ThinkVoiceAPI - NOT SUPPORTED by ThinkVoiceAPI
+  // ThinkVoiceonly supports /v2/agent/{agent_id}/executions, not a global executions endpoint
   app.get(api.bolna.executions.list.path, requireTenantUser, async (req: AuthRequest, res: Response) => {
     try {
-      // Since Bolna doesn't support listing all executions, we return empty data
+      // Since ThinkVoicedoesn't support listing all executions, we return empty data
       // Users must select a specific agent to see executions
       res.json({ data: [], message: 'Please select a specific agent to view executions' });
     } catch (err: any) {
@@ -1013,9 +1075,12 @@ export function registerMultiTenantRoutes(app: Express) {
       if (!custom_model_name || !custom_model_url) {
         return res.status(400).json({ message: 'Missing required fields: custom_model_name and custom_model_url' });
       }
+      console.log('[ROUTES] Adding custom model:', { custom_model_name, custom_model_url });
       const result = await bolnaService.addCustomModel(req.tenant.bolna_sub_account_id, { custom_model_name, custom_model_url });
+      console.log('[ROUTES] Custom model added:', result);
       res.json(result);
     } catch (err: any) {
+      console.error('[ROUTES] Add custom model error:', err?.message || err);
       res.status(err?.status || 400).json({ message: err?.message || String(err) });
     }
   });
@@ -1129,7 +1194,7 @@ export function registerMultiTenantRoutes(app: Express) {
     }
   });
 
-  // Proxy create (url/file) to Bolna - uses multer if installed as before
+  // Proxy create (url/file) to ThinkVoice- uses multer if installed as before
   (async () => {
     try {
       // @ts-ignore: optional dependency
@@ -1139,29 +1204,41 @@ export function registerMultiTenantRoutes(app: Express) {
 
       app.post(api.bolna.knowledgebase.create.path, requireTenantUser, upload.single('file'), async (req: AuthRequest, res: Response) => {
         try {
+          console.log('[ROUTES] Knowledge base creation request:', { hasFile: !!(req as any).file, hasUrl: !!req.body?.url, body: req.body });
+          
           const rawUrl = req.body && req.body.url ? String(req.body.url).trim() : '';
           if (rawUrl.length > 0) {
             const payload = {
               url: rawUrl,
+              knowledgebase_name: req.body.knowledgebase_name,
               chunk_size: req.body.chunk_size,
               similarity_top_k: req.body.similarity_top_k,
               overlapping: req.body.overlapping
             };
+            console.log('[ROUTES] Creating KB with URL payload:', payload);
             const created = await bolnaService.createKnowledgebase(req.tenant.bolna_sub_account_id, payload as any);
+            console.log('[ROUTES] KB created successfully:', created);
             res.json(created);
             return;
           }
 
           if ((req as any).file) {
             const f = (req as any).file;
-            const created = await bolnaService.createKnowledgebase(req.tenant.bolna_sub_account_id, { file: { buffer: f.buffer, filename: f.originalname } });
+            const payload = { 
+              file: { buffer: f.buffer, filename: f.originalname },
+              knowledgebase_name: req.body.knowledgebase_name
+            };
+            console.log('[ROUTES] Creating KB with file:', f.originalname, 'name:', req.body.knowledgebase_name);
+            const created = await bolnaService.createKnowledgebase(req.tenant.bolna_sub_account_id, payload);
+            console.log('[ROUTES] KB created successfully:', created);
             res.json(created);
             return;
           }
 
+          console.log('[ROUTES] No file or URL provided');
           res.status(400).json({ message: "Must provide either 'file' or 'url' parameter" });
         } catch (err: any) {
-          console.error('[ROUTES]', api.bolna.knowledgebase.create.path, 'error', err?.message || err);
+          console.error('[ROUTES]', api.bolna.knowledgebase.create.path, 'error', err?.message || err, err?.stack);
           res.status(err?.status || 400).json({ message: err?.message || String(err) });
         }
       });
@@ -1172,21 +1249,27 @@ export function registerMultiTenantRoutes(app: Express) {
 
       app.post(api.bolna.knowledgebase.create.path, requireTenantUser, async (req: AuthRequest, res: Response) => {
         try {
+          console.log('[ROUTES] Knowledge base creation request (no multer):', { hasUrl: !!req.body?.url, body: req.body });
+          
           if (req.body && req.body.url) {
             const payload = {
               url: req.body.url,
+              knowledgebase_name: req.body.knowledgebase_name,
               chunk_size: req.body.chunk_size,
               similarity_top_k: req.body.similarity_top_k,
               overlapping: req.body.overlapping
             };
+            console.log('[ROUTES] Creating KB with URL payload:', payload);
             const created = await bolnaService.createKnowledgebase(req.tenant.bolna_sub_account_id, payload as any);
+            console.log('[ROUTES] KB created successfully:', created);
             res.json(created);
             return;
           }
 
+          console.log('[ROUTES] No URL provided');
           res.status(400).json({ message: "Must provide either 'file' or 'url' parameter" });
         } catch (err: any) {
-          console.error('[ROUTES]', api.bolna.knowledgebase.create.path, 'error', err?.message || err);
+          console.error('[ROUTES]', api.bolna.knowledgebase.create.path, 'error', err?.message || err, err?.stack);
           res.status(err?.status || 400).json({ message: err?.message || String(err) });
         }
       });

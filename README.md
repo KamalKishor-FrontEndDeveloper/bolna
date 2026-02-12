@@ -34,7 +34,7 @@ Preferred communication style: Simple, everyday language.
 │       ├── hooks/        # Custom React hooks
 │       └── lib/          # Utilities and query client
 ├── server/           # Express backend
-│   ├── lib/          # Service classes (Bolna API wrapper)
+│   ├── lib/          # Service classes (ThinkVoiceAPI wrapper)
 │   └── routes.ts     # API route definitions
 ├── shared/           # Shared code between client/server
 │   ├── schema.ts     # Drizzle schema + Zod types
@@ -43,7 +43,7 @@ Preferred communication style: Simple, everyday language.
 ```
 
 ### Key Design Decisions
-1. **Proxy Pattern**: The backend proxies all Bolna API calls rather than exposing API keys to the frontend
+1. **Proxy Pattern**: The backend proxies all ThinkVoiceAPI calls rather than exposing API keys to the frontend
 2. **Shared Types**: Schema definitions in `shared/` ensure type safety across frontend and backend
 3. **Component Library**: Uses shadcn/ui components for consistent, accessible UI elements
 4. **API Key Storage**: Keys are stored encrypted in PostgreSQL, never exposed to the client

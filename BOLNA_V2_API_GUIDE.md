@@ -1,8 +1,8 @@
-# Bolna v2 API Implementation Guide
+# ThinkVoicev2 API Implementation Guide
 
 ## Overview
 
-This application implements the Bolna.ai v2 API for creating and managing voice AI agents. The implementation follows the official Bolna API specification documented at https://www.bolna.ai/docs.
+This application implements the Bolna.ai v2 API for creating and managing voice AI agents. The implementation follows the official ThinkVoiceAPI specification documented at https://www.bolna.ai/docs.
 
 ## API Endpoint
 
@@ -416,7 +416,7 @@ const payload = {
 - **Hooks**: `use-bolna.ts` - API integration hooks
 
 ### Backend (Express)
-- **Service**: `server/lib/bolna.ts` - Bolna API wrapper
+- **Service**: `server/lib/bolna.ts` - ThinkVoiceAPI wrapper
 - **Routes**: `server/multiTenantRoutes.ts` - API endpoints
 - **Schema**: `shared/schema.ts` - Zod validation schemas
 
@@ -434,7 +434,7 @@ await client.post("/v2/agent", payload, { headers });
 The implementation includes comprehensive error handling:
 
 1. **Validation Errors**: Zod schema validation before API calls
-2. **API Errors**: Proper error mapping from Bolna API responses
+2. **API Errors**: Proper error mapping from ThinkVoiceAPI responses
 3. **User Feedback**: Clear error messages in the UI
 
 ## Testing
@@ -451,7 +451,7 @@ curl -X POST https://api.bolna.ai/v2/agent \
 
 ## References
 
-- [Bolna API Documentation](https://www.bolna.ai/docs)
+- [ThinkVoiceAPI Documentation](https://www.bolna.ai/docs)
 - [Create Agent API](https://www.bolna.ai/docs/api-reference/agents/create)
 - [LLM Models](https://www.bolna.ai/docs/llms)
 - [Voice Providers](https://www.bolna.ai/docs/voices)

@@ -31,7 +31,7 @@ export function RawDataDialog({ open, onOpenChange, executionId, agentId }: RawD
             <div>
               <DialogTitle>Raw Execution Data</DialogTitle>
               <p className="text-sm font-normal text-muted-foreground mt-1">
-                Complete JSON response from Bolna API
+                Complete JSON response from ThinkVoiceAPI
               </p>
             </div>
             <Button 

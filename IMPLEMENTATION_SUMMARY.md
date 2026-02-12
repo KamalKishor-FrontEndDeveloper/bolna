@@ -3,18 +3,18 @@
 ## Changes Made
 
 ### 1. Frontend Hook Update (`client/src/hooks/use-bolna.ts`)
-- Updated `useUpdateAgent` hook to call the correct Bolna API endpoint
+- Updated `useUpdateAgent` hook to call the correct ThinkVoiceAPI endpoint
 - Changed from `/api/tenant/agents/${id}` to use `api.bolna.agents.update.path` (which is `/api/bolna/agents/:id`)
 - Now uses the proper HTTP method from the API contract: `api.bolna.agents.update.method` (PUT)
 
 ### 2. Backend Route Addition (`server/multiTenantRoutes.ts`)
 - Added new PUT route handler for `/api/bolna/agents/:id`
 - Route is protected with `requireTenantUser` and `requireRole(['admin', 'manager'])`
-- Proxies the update request to Bolna API using `bolnaService.updateAgent()`
+- Proxies the update request to ThinkVoiceAPI using `bolnaService.updateAgent()`
 - Passes the tenant's `bolna_sub_account_id` for proper multi-tenant isolation
 
 ### 3. Existing Infrastructure Used
-- **Bolna Service** (`server/lib/bolna.ts`): Already has `updateAgent()` method that calls Bolna's `PUT /v2/agent/{agent_id}` endpoint
+- **ThinkVoiceService** (`server/lib/bolna.ts`): Already has `updateAgent()` method that calls Bolna's `PUT /v2/agent/{agent_id}` endpoint
 - **API Contract** (`shared/routes.ts`): Already defines the update endpoint structure
 - **Form Transformation** (`client/src/pages/Agents.tsx`): Already transforms form data to match Bolna's v2 API structure
 
@@ -25,14 +25,14 @@
 3. **Frontend hook** calls `updateAgent({ id: selectedAgentId, data: transformedData })`
 4. **HTTP Request** sent to `PUT /api/bolna/agents/{agent_id}` with JWT token
 5. **Backend route** validates user permissions and tenant access
-6. **Bolna Service** makes authenticated request to `PUT https://api.bolna.ai/v2/agent/{agent_id}` with:
-   - Authorization header with Bolna API key
+6. **ThinkVoiceService** makes authenticated request to `PUT https://api.bolna.ai/v2/agent/{agent_id}` with:
+   - Authorization header with ThinkVoiceAPI key
    - X-Sub-Account-Id header for tenant isolation
    - Payload containing `agent_config` and `agent_prompts`
 7. **Response** flows back through the chain
 8. **Success toast** shown to user and agent list refreshed
 
-## Payload Structure (Bolna v2 API)
+## Payload Structure (ThinkVoicev2 API)
 
 ```json
 {

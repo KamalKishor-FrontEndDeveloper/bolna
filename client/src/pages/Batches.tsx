@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/PageHeader";
 import { useAgents, useAgentBatches, useScheduleBatch, useStopBatch, useDeleteBatch } from "@/hooks/use-bolna";
@@ -30,6 +30,12 @@ export default function Batches() {
   const { mutate: scheduleBatch } = useScheduleBatch();
   const { mutate: stopBatch } = useStopBatch();
   const { mutate: deleteBatch } = useDeleteBatch();
+
+  useEffect(() => {
+    if (agents && agents.length > 0 && !selectedAgentId) {
+      setSelectedAgentId(String(agents[0].id));
+    }
+  }, [agents, selectedAgentId]);
 
 
 
@@ -86,8 +92,8 @@ export default function Batches() {
     if (statusLower === 'completed') {
       return toast({ title: 'Cannot run', description: 'This batch is already completed', variant: 'destructive' });
     }
-    const formatIsoForBolna = (date: Date) => date.toISOString().replace(/\.\d{3}Z$/, '+00:00');
-    scheduleBatch({ batchId, scheduled_at: formatIsoForBolna(new Date()), bypass_call_guardrails: false }, {
+    const formatIsoForThinkVoice= (date: Date) => date.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+    scheduleBatch({ batchId, scheduled_at: formatIsoForThinkVoice(new Date()), bypass_call_guardrails: false }, {
       onSuccess: () => {
         toast({ title: 'Batch scheduled', description: 'Batch will start immediately' });
         refetch();
@@ -154,11 +160,7 @@ export default function Batches() {
             <h1 className="text-2xl font-bold tracking-tight">Agent Batches</h1>
             <p className="text-sm text-muted-foreground">Manage and monitor your outbound call batches</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground">Available balance: <span className="text-foreground">$4.86</span></span>
-            <Button variant="outline" size="sm" className="gap-2"><Plus className="w-4 h-4" /> Add more funds</Button>
-            <Button variant="outline" size="sm" className="gap-2 text-slate-500">Help</Button>
-          </div>
+      
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -273,9 +275,13 @@ export default function Batches() {
                               title="Run Now" 
                               onClick={() => handleRunNow(batch.batch_id, batch.status)} 
                               className="text-slate-400 hover:text-slate-600"
-                              disabled={String(batch.status || '').toLowerCase() === 'completed'}
+                              disabled={['completed', 'running', 'processed', 'stopped', 'cancelled'].includes(String(batch.status || '').toLowerCase())}
                             >
-                              <Play className="w-4 h-4" />
+                              {['running', 'processed'].includes(String(batch.status || '').toLowerCase()) ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Play className="w-4 h-4" />
+                              )}
                             </Button>
                           </TableCell>
                           <TableCell className="text-center">
